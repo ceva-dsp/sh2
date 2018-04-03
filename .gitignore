@@ -1,0 +1,15 @@
+# Emacs temp files
+*~
+\#*
+.\#*
+
+# Output files
+/STM32F4xx-Nucleo/
+/docs/
+*.pyc
+
+# hcbin files and output files under util/
+*.hcbin
+util/1000*
+util/firmware*
+
