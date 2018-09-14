@@ -532,7 +532,7 @@ static void sensorhubInputHdlr(sh2_t *pSh2, uint8_t *payload, uint16_t len, uint
                 uint16_t delay = ((pReport[2] & 0xFC) << 6) + pReport[3];
                 event.timestamp_uS = touSTimestamp(timestamp, referenceDelta, delay);
                 event.reportId = reportId;
-                event.pReport = pReport;
+                memcpy(event.report, pReport, reportLen);
                 event.len = reportLen;
                 if (pSh2->sensorCallback != 0) {
                     pSh2->sensorCallback(pSh2->sensorCookie, &event);
@@ -569,7 +569,7 @@ static void sensorhubInputGyroRvHdlr(void *cookie, uint8_t *payload, uint16_t le
     while (cursor < len) {
         event.timestamp_uS = timestamp;
         event.reportId = reportId;
-        event.pReport = payload+cursor;
+        memcpy(event.report, payload+cursor, reportLen);
         event.len = reportLen;
 
         if (pSh2->sensorCallback != 0) {
@@ -1048,34 +1048,62 @@ static void stuffMetadata(sh2_SensorMetadata_t *pData, uint32_t *frsData)
     pData->shVersion        = (frsData[0] >> 16) & 0xFF;
     pData->range            = frsData[1];
     pData->resolution       = frsData[2];
-    pData->power_mA         = (frsData[3] >> 0) & 0xFFFF;    // 16.10 forma = Xt
+    pData->power_mA         = (frsData[3] >> 0) & 0xFFFF;    // 16.10 format
     pData->revision         = (frsData[3] >> 16) & 0xFFFF;
     pData->minPeriod_uS     = frsData[4];
+    pData->maxPeriod_uS     = 0;  // ...unless reading format 4 metadata below
     pData->fifoMax          = (frsData[5] >> 0) & 0xFFFF;
     pData->fifoReserved     = (frsData[5] >> 16) & 0xFFFF;
     pData->batchBufferBytes = (frsData[6] >> 0) & 0xFFFF;;
     pData->vendorIdLen      = (frsData[6] >> 16) & 0xFFFF;
+
+    // Init fields that may not be present, depending on metadata revision
+    pData->qPoint1           = 0;
+    pData->qPoint2           = 0;
+    pData->qPoint3           = 0;
+    pData->sensorSpecificLen = 0;
     strcpy(pData->vendorId, ""); // init with empty string in case vendorIdLen == 0
+
+    int vendorIdOffset = 8;
+    // Get revision-specific fields
     if (pData->revision == 0) {
-        memcpy(pData->vendorId, (uint8_t *)&frsData[7], pData->vendorIdLen);
+        // No fixed fields, vendor id copied after if-else block
     }
     else if (pData->revision == 1) {
         pData->qPoint1        = (frsData[7] >> 0) & 0xFFFF;
         pData->qPoint2        = (frsData[7] >> 16) & 0xFFFF;
-        memcpy(pData->vendorId, (uint8_t *)&frsData[8], pData->vendorIdLen);
     }
     else if (pData->revision == 2) {
         pData->qPoint1        = (frsData[7] >> 0) & 0xFFFF;
         pData->qPoint2        = (frsData[7] >> 16) & 0xFFFF;
         pData->sensorSpecificLen = (frsData[8] >> 0) & 0xFFFF;
         memcpy(pData->sensorSpecific, (uint8_t *)&frsData[9], pData->sensorSpecificLen);
-        int vendorIdOffset = 9 + ((pData->sensorSpecificLen+3)/4); // 9 + one word for every 4 bytes of SS data
-        memcpy(pData->vendorId, (uint8_t *)&frsData[vendorIdOffset],
-               pData->vendorIdLen);
+        vendorIdOffset = 9 + ((pData->sensorSpecificLen+3)/4); // 9 + one word for every 4 bytes of SS data
+    }
+    else if (pData->revision == 3) {
+        pData->qPoint1        = (frsData[7] >> 0) & 0xFFFF;
+        pData->qPoint2        = (frsData[7] >> 16) & 0xFFFF;
+        pData->sensorSpecificLen = (frsData[8] >> 0) & 0xFFFF;
+        pData->qPoint3        = (frsData[8] >> 16) & 0xFFFF;
+        memcpy(pData->sensorSpecific, (uint8_t *)&frsData[9], pData->sensorSpecificLen);
+        vendorIdOffset = 9 + ((pData->sensorSpecificLen+3)/4); // 9 + one word for every 4 bytes of SS data
+    }
+    else if (pData->revision == 4) {
+        pData->qPoint1        = (frsData[7] >> 0) & 0xFFFF;
+        pData->qPoint2        = (frsData[7] >> 16) & 0xFFFF;
+        pData->sensorSpecificLen = (frsData[8] >> 0) & 0xFFFF;
+        pData->qPoint3        = (frsData[8] >> 16) & 0xFFFF;
+        pData->maxPeriod_uS   = frsData[9];
+        memcpy(pData->sensorSpecific, (uint8_t *)&frsData[10], pData->sensorSpecificLen);
+        vendorIdOffset = 10 + ((pData->sensorSpecificLen+3)/4); // 9 + one word for every 4 bytes of SS data
     }
     else {
         // Unrecognized revision!
     }
+
+    // Copy vendor id
+    memcpy(pData->vendorId, (uint8_t *)&frsData[vendorIdOffset],
+           pData->vendorIdLen);
 }
 
 // ------------------------------------------------------------------------
@@ -1922,7 +1950,7 @@ int sh2_setFrs(uint16_t recordId, uint32_t *pData, uint16_t words)
 {
     sh2_t *pSh2 = &_sh2;
     
-    if (pData == 0) {
+    if ((pData == 0) && (words != 0)) {
         return SH2_ERR_BAD_PARAM;
     }
     

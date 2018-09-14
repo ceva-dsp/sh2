@@ -82,8 +82,8 @@ int sh2_decodeSensorEvent(sh2_SensorValue_t *value, const sh2_SensorEvent_t *eve
     value->timestamp = event->timestamp_uS;
 
     if (value->sensorId != SH2_GYRO_INTEGRATED_RV) {
-        value->sequence = event->pReport[1];
-        value->status = event->pReport[2] & 0x03;
+        value->sequence = event->report[1];
+        value->status = event->report[2] & 0x03;
     }
     else {
         value->sequence = 0;
@@ -219,251 +219,251 @@ int sh2_decodeSensorEvent(sh2_SensorValue_t *value, const sh2_SensorEvent_t *eve
 
 static int decodeRawAccelerometer(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.rawAccelerometer.x = read16(&event->pReport[4]);
-    value->un.rawAccelerometer.y = read16(&event->pReport[6]);
-    value->un.rawAccelerometer.z = read16(&event->pReport[8]);
-    value->un.rawAccelerometer.timestamp = read32(&event->pReport[12]);
+    value->un.rawAccelerometer.x = read16(&event->report[4]);
+    value->un.rawAccelerometer.y = read16(&event->report[6]);
+    value->un.rawAccelerometer.z = read16(&event->report[8]);
+    value->un.rawAccelerometer.timestamp = read32(&event->report[12]);
 
     return SH2_OK;
 }
 
 static int decodeAccelerometer(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.accelerometer.x = read16(&event->pReport[4]) * SCALE_Q(8);
-    value->un.accelerometer.y = read16(&event->pReport[6]) * SCALE_Q(8);
-    value->un.accelerometer.z = read16(&event->pReport[8]) * SCALE_Q(8);
+    value->un.accelerometer.x = read16(&event->report[4]) * SCALE_Q(8);
+    value->un.accelerometer.y = read16(&event->report[6]) * SCALE_Q(8);
+    value->un.accelerometer.z = read16(&event->report[8]) * SCALE_Q(8);
 
     return SH2_OK;
 }
 
 static int decodeLinearAcceleration(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.linearAcceleration.x = read16(&event->pReport[4]) * SCALE_Q(8);
-    value->un.linearAcceleration.y = read16(&event->pReport[6]) * SCALE_Q(8);
-    value->un.linearAcceleration.z = read16(&event->pReport[8]) * SCALE_Q(8);
+    value->un.linearAcceleration.x = read16(&event->report[4]) * SCALE_Q(8);
+    value->un.linearAcceleration.y = read16(&event->report[6]) * SCALE_Q(8);
+    value->un.linearAcceleration.z = read16(&event->report[8]) * SCALE_Q(8);
 
     return SH2_OK;
 }
 
 static int decodeGravity(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.gravity.x = read16(&event->pReport[4]) * SCALE_Q(8);
-    value->un.gravity.y = read16(&event->pReport[6]) * SCALE_Q(8);
-    value->un.gravity.z = read16(&event->pReport[8]) * SCALE_Q(8);
+    value->un.gravity.x = read16(&event->report[4]) * SCALE_Q(8);
+    value->un.gravity.y = read16(&event->report[6]) * SCALE_Q(8);
+    value->un.gravity.z = read16(&event->report[8]) * SCALE_Q(8);
 
     return SH2_OK;
 }
 
 static int decodeRawGyroscope(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.rawGyroscope.x = read16(&event->pReport[4]);
-    value->un.rawGyroscope.y = read16(&event->pReport[6]);
-    value->un.rawGyroscope.z = read16(&event->pReport[8]);
-    value->un.rawGyroscope.temperature = read16(&event->pReport[10]);
-    value->un.rawGyroscope.timestamp = read32(&event->pReport[12]);
+    value->un.rawGyroscope.x = read16(&event->report[4]);
+    value->un.rawGyroscope.y = read16(&event->report[6]);
+    value->un.rawGyroscope.z = read16(&event->report[8]);
+    value->un.rawGyroscope.temperature = read16(&event->report[10]);
+    value->un.rawGyroscope.timestamp = read32(&event->report[12]);
 
     return SH2_OK;
 }
 
 static int decodeGyroscopeCalibrated(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.gyroscope.x = read16(&event->pReport[4]) * SCALE_Q(9);
-    value->un.gyroscope.y = read16(&event->pReport[6]) * SCALE_Q(9);
-    value->un.gyroscope.z = read16(&event->pReport[8]) * SCALE_Q(9);
+    value->un.gyroscope.x = read16(&event->report[4]) * SCALE_Q(9);
+    value->un.gyroscope.y = read16(&event->report[6]) * SCALE_Q(9);
+    value->un.gyroscope.z = read16(&event->report[8]) * SCALE_Q(9);
 
     return SH2_OK;
 }
 
 static int decodeGyroscopeUncal(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.gyroscopeUncal.x = read16(&event->pReport[4]) * SCALE_Q(9);
-    value->un.gyroscopeUncal.y = read16(&event->pReport[6]) * SCALE_Q(9);
-    value->un.gyroscopeUncal.z = read16(&event->pReport[8]) * SCALE_Q(9);
+    value->un.gyroscopeUncal.x = read16(&event->report[4]) * SCALE_Q(9);
+    value->un.gyroscopeUncal.y = read16(&event->report[6]) * SCALE_Q(9);
+    value->un.gyroscopeUncal.z = read16(&event->report[8]) * SCALE_Q(9);
 
-    value->un.gyroscopeUncal.biasX = read16(&event->pReport[10]) * SCALE_Q(9);
-    value->un.gyroscopeUncal.biasY = read16(&event->pReport[12]) * SCALE_Q(9);
-    value->un.gyroscopeUncal.biasZ = read16(&event->pReport[14]) * SCALE_Q(9);
+    value->un.gyroscopeUncal.biasX = read16(&event->report[10]) * SCALE_Q(9);
+    value->un.gyroscopeUncal.biasY = read16(&event->report[12]) * SCALE_Q(9);
+    value->un.gyroscopeUncal.biasZ = read16(&event->report[14]) * SCALE_Q(9);
 
     return SH2_OK;
 }
 
 static int decodeRawMagnetometer(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.rawMagnetometer.x = read16(&event->pReport[4]);
-    value->un.rawMagnetometer.y = read16(&event->pReport[6]);
-    value->un.rawMagnetometer.z = read16(&event->pReport[8]);
-    value->un.rawMagnetometer.timestamp = read32(&event->pReport[12]);
+    value->un.rawMagnetometer.x = read16(&event->report[4]);
+    value->un.rawMagnetometer.y = read16(&event->report[6]);
+    value->un.rawMagnetometer.z = read16(&event->report[8]);
+    value->un.rawMagnetometer.timestamp = read32(&event->report[12]);
 
     return SH2_OK;
 }
 
 static int decodeMagneticFieldCalibrated(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.magneticField.x = read16(&event->pReport[4]) * SCALE_Q(4);
-    value->un.magneticField.y = read16(&event->pReport[6]) * SCALE_Q(4);
-    value->un.magneticField.z = read16(&event->pReport[8]) * SCALE_Q(4);
+    value->un.magneticField.x = read16(&event->report[4]) * SCALE_Q(4);
+    value->un.magneticField.y = read16(&event->report[6]) * SCALE_Q(4);
+    value->un.magneticField.z = read16(&event->report[8]) * SCALE_Q(4);
 
     return SH2_OK;
 }
 
 static int decodeMagneticFieldUncal(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.magneticFieldUncal.x = read16(&event->pReport[4]) * SCALE_Q(4);
-    value->un.magneticFieldUncal.y = read16(&event->pReport[6]) * SCALE_Q(4);
-    value->un.magneticFieldUncal.z = read16(&event->pReport[8]) * SCALE_Q(4);
+    value->un.magneticFieldUncal.x = read16(&event->report[4]) * SCALE_Q(4);
+    value->un.magneticFieldUncal.y = read16(&event->report[6]) * SCALE_Q(4);
+    value->un.magneticFieldUncal.z = read16(&event->report[8]) * SCALE_Q(4);
 
-    value->un.magneticFieldUncal.biasX = read16(&event->pReport[10]) * SCALE_Q(4);
-    value->un.magneticFieldUncal.biasY = read16(&event->pReport[12]) * SCALE_Q(4);
-    value->un.magneticFieldUncal.biasZ = read16(&event->pReport[14]) * SCALE_Q(4);
+    value->un.magneticFieldUncal.biasX = read16(&event->report[10]) * SCALE_Q(4);
+    value->un.magneticFieldUncal.biasY = read16(&event->report[12]) * SCALE_Q(4);
+    value->un.magneticFieldUncal.biasZ = read16(&event->report[14]) * SCALE_Q(4);
 
     return SH2_OK;
 }
 
 static int decodeRotationVector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.rotationVector.i = read16(&event->pReport[4]) * SCALE_Q(14);
-    value->un.rotationVector.j = read16(&event->pReport[6]) * SCALE_Q(14);
-    value->un.rotationVector.k = read16(&event->pReport[8]) * SCALE_Q(14);
-    value->un.rotationVector.real = read16(&event->pReport[10]) * SCALE_Q(14);
-    value->un.rotationVector.accuracy = read16(&event->pReport[12]) * SCALE_Q(12);
+    value->un.rotationVector.i = read16(&event->report[4]) * SCALE_Q(14);
+    value->un.rotationVector.j = read16(&event->report[6]) * SCALE_Q(14);
+    value->un.rotationVector.k = read16(&event->report[8]) * SCALE_Q(14);
+    value->un.rotationVector.real = read16(&event->report[10]) * SCALE_Q(14);
+    value->un.rotationVector.accuracy = read16(&event->report[12]) * SCALE_Q(12);
 
     return SH2_OK;
 }
 
 static int decodeGameRotationVector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.gameRotationVector.i = read16(&event->pReport[4]) * SCALE_Q(14);
-    value->un.gameRotationVector.j = read16(&event->pReport[6]) * SCALE_Q(14);
-    value->un.gameRotationVector.k = read16(&event->pReport[8]) * SCALE_Q(14);
-    value->un.gameRotationVector.real = read16(&event->pReport[10]) * SCALE_Q(14);
+    value->un.gameRotationVector.i = read16(&event->report[4]) * SCALE_Q(14);
+    value->un.gameRotationVector.j = read16(&event->report[6]) * SCALE_Q(14);
+    value->un.gameRotationVector.k = read16(&event->report[8]) * SCALE_Q(14);
+    value->un.gameRotationVector.real = read16(&event->report[10]) * SCALE_Q(14);
 
     return SH2_OK;
 }
 
 static int decodeGeomagneticRotationVector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.geoMagRotationVector.i = read16(&event->pReport[4]) * SCALE_Q(14);
-    value->un.geoMagRotationVector.j = read16(&event->pReport[6]) * SCALE_Q(14);
-    value->un.geoMagRotationVector.k = read16(&event->pReport[8]) * SCALE_Q(14);
-    value->un.geoMagRotationVector.real = read16(&event->pReport[10]) * SCALE_Q(14);
-    value->un.geoMagRotationVector.accuracy = read16(&event->pReport[12]) * SCALE_Q(12);
+    value->un.geoMagRotationVector.i = read16(&event->report[4]) * SCALE_Q(14);
+    value->un.geoMagRotationVector.j = read16(&event->report[6]) * SCALE_Q(14);
+    value->un.geoMagRotationVector.k = read16(&event->report[8]) * SCALE_Q(14);
+    value->un.geoMagRotationVector.real = read16(&event->report[10]) * SCALE_Q(14);
+    value->un.geoMagRotationVector.accuracy = read16(&event->report[12]) * SCALE_Q(12);
 
     return SH2_OK;
 }
 
 static int decodePressure(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.pressure.value = read32(&event->pReport[4]) * SCALE_Q(20);
+    value->un.pressure.value = read32(&event->report[4]) * SCALE_Q(20);
 
     return SH2_OK;
 }
 
 static int decodeAmbientLight(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.ambientLight.value = read32(&event->pReport[4]) * SCALE_Q(8);
+    value->un.ambientLight.value = read32(&event->report[4]) * SCALE_Q(8);
 
     return SH2_OK;
 }
 
 static int decodeHumidity(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.humidity.value = read16(&event->pReport[4]) * SCALE_Q(8);
+    value->un.humidity.value = read16(&event->report[4]) * SCALE_Q(8);
 
     return SH2_OK;
 }
 
 static int decodeProximity(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.proximity.value = read16(&event->pReport[4]) * SCALE_Q(4);
+    value->un.proximity.value = read16(&event->report[4]) * SCALE_Q(4);
 
     return SH2_OK;
 }
 
 static int decodeTemperature(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.temperature.value = read16(&event->pReport[4]) * SCALE_Q(7);
+    value->un.temperature.value = read16(&event->report[4]) * SCALE_Q(7);
 
     return SH2_OK;
 }
 
 static int decodeReserved(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.reserved.tbd = read16(&event->pReport[4]) * SCALE_Q(7);
+    value->un.reserved.tbd = read16(&event->report[4]) * SCALE_Q(7);
 
     return SH2_OK;
 }
 
 static int decodeTapDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.tapDetector.flags = event->pReport[4];
+    value->un.tapDetector.flags = event->report[4];
 
     return SH2_OK;
 }
 
 static int decodeStepDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.stepDetector.latency = readu32(&event->pReport[4]);
+    value->un.stepDetector.latency = readu32(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodeStepCounter(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.stepCounter.latency = readu32(&event->pReport[4]);
-    value->un.stepCounter.steps = readu32(&event->pReport[8]);
+    value->un.stepCounter.latency = readu32(&event->report[4]);
+    value->un.stepCounter.steps = readu32(&event->report[8]);
 
     return SH2_OK;
 }
 
 static int decodeSignificantMotion(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.sigMotion.motion = readu16(&event->pReport[4]);
+    value->un.sigMotion.motion = readu16(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodeStabilityClassifier(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.stabilityClassifier.classification = event->pReport[4];
+    value->un.stabilityClassifier.classification = event->report[4];
 
     return SH2_OK;
 }
 
 static int decodeShakeDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.stabilityClassifier.classification = readu16(&event->pReport[4]);
+    value->un.shakeDetector.shake = readu16(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodeFlipDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.flipDetector.flip = readu16(&event->pReport[4]);
+    value->un.flipDetector.flip = readu16(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodePickupDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.pickupDetector.pickup = readu16(&event->pReport[4]);
+    value->un.pickupDetector.pickup = readu16(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodeStabilityDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.stabilityDetector.stability = readu16(&event->pReport[4]);
+    value->un.stabilityDetector.stability = readu16(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodePersonalActivityClassifier(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.personalActivityClassifier.page = event->pReport[4] & 0x7F;
-    value->un.personalActivityClassifier.lastPage = ((event->pReport[4] & 0x80) != 0);
-    value->un.personalActivityClassifier.mostLikelyState = event->pReport[5];
+    value->un.personalActivityClassifier.page = event->report[4] & 0x7F;
+    value->un.personalActivityClassifier.lastPage = ((event->report[4] & 0x80) != 0);
+    value->un.personalActivityClassifier.mostLikelyState = event->report[5];
     for (int n = 0; n < 10; n++) {
-        value->un.personalActivityClassifier.confidence[n] = event->pReport[6+n];
+        value->un.personalActivityClassifier.confidence[n] = event->report[6+n];
     }
     
     return SH2_OK;
@@ -471,69 +471,69 @@ static int decodePersonalActivityClassifier(sh2_SensorValue_t *value, const sh2_
 
 static int decodeSleepDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.sleepDetector.sleepState = event->pReport[4];
+    value->un.sleepDetector.sleepState = event->report[4];
 
     return SH2_OK;
 }
 
 static int decodeTiltDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.tiltDetector.tilt = readu16(&event->pReport[4]);
+    value->un.tiltDetector.tilt = readu16(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodePocketDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.pocketDetector.pocket = readu16(&event->pReport[4]);
+    value->un.pocketDetector.pocket = readu16(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodeCircleDetector(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.circleDetector.circle = readu16(&event->pReport[4]);
+    value->un.circleDetector.circle = readu16(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodeHeartRateMonitor(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.heartRateMonitor.heartRate = readu16(&event->pReport[4]);
+    value->un.heartRateMonitor.heartRate = readu16(&event->report[4]);
 
     return SH2_OK;
 }
 
 static int decodeArvrStabilizedRV(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.arvrStabilizedRV.i = read16(&event->pReport[4]) * SCALE_Q(14);
-    value->un.arvrStabilizedRV.j = read16(&event->pReport[6]) * SCALE_Q(14);
-    value->un.arvrStabilizedRV.k = read16(&event->pReport[8]) * SCALE_Q(14);
-    value->un.arvrStabilizedRV.real = read16(&event->pReport[10]) * SCALE_Q(14);
-    value->un.arvrStabilizedRV.accuracy = read16(&event->pReport[12]) * SCALE_Q(12);
+    value->un.arvrStabilizedRV.i = read16(&event->report[4]) * SCALE_Q(14);
+    value->un.arvrStabilizedRV.j = read16(&event->report[6]) * SCALE_Q(14);
+    value->un.arvrStabilizedRV.k = read16(&event->report[8]) * SCALE_Q(14);
+    value->un.arvrStabilizedRV.real = read16(&event->report[10]) * SCALE_Q(14);
+    value->un.arvrStabilizedRV.accuracy = read16(&event->report[12]) * SCALE_Q(12);
 
     return SH2_OK;
 }
 
 static int decodeArvrStabilizedGRV(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.arvrStabilizedGRV.i = read16(&event->pReport[4]) * SCALE_Q(14);
-    value->un.arvrStabilizedGRV.j = read16(&event->pReport[6]) * SCALE_Q(14);
-    value->un.arvrStabilizedGRV.k = read16(&event->pReport[8]) * SCALE_Q(14);
-    value->un.arvrStabilizedGRV.real = read16(&event->pReport[10]) * SCALE_Q(14);
+    value->un.arvrStabilizedGRV.i = read16(&event->report[4]) * SCALE_Q(14);
+    value->un.arvrStabilizedGRV.j = read16(&event->report[6]) * SCALE_Q(14);
+    value->un.arvrStabilizedGRV.k = read16(&event->report[8]) * SCALE_Q(14);
+    value->un.arvrStabilizedGRV.real = read16(&event->report[10]) * SCALE_Q(14);
 
     return SH2_OK;
 }
 
 static int decodeGyroIntegratedRV(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.gyroIntegratedRV.i = read16(&event->pReport[0]) * SCALE_Q(14);
-    value->un.gyroIntegratedRV.j = read16(&event->pReport[2]) * SCALE_Q(14);
-    value->un.gyroIntegratedRV.k = read16(&event->pReport[4]) * SCALE_Q(14);
-    value->un.gyroIntegratedRV.real = read16(&event->pReport[6]) * SCALE_Q(14);
-    value->un.gyroIntegratedRV.angVelX = read16(&event->pReport[8]) * SCALE_Q(10);
-    value->un.gyroIntegratedRV.angVelY = read16(&event->pReport[10]) * SCALE_Q(10);
-    value->un.gyroIntegratedRV.angVelZ = read16(&event->pReport[12]) * SCALE_Q(10);
+    value->un.gyroIntegratedRV.i = read16(&event->report[0]) * SCALE_Q(14);
+    value->un.gyroIntegratedRV.j = read16(&event->report[2]) * SCALE_Q(14);
+    value->un.gyroIntegratedRV.k = read16(&event->report[4]) * SCALE_Q(14);
+    value->un.gyroIntegratedRV.real = read16(&event->report[6]) * SCALE_Q(14);
+    value->un.gyroIntegratedRV.angVelX = read16(&event->report[8]) * SCALE_Q(10);
+    value->un.gyroIntegratedRV.angVelY = read16(&event->report[10]) * SCALE_Q(10);
+    value->un.gyroIntegratedRV.angVelZ = read16(&event->report[12]) * SCALE_Q(10);
 
     return SH2_OK;
 }

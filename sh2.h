@@ -59,11 +59,14 @@ typedef void (sh2_EventCallback_t)(void * cookie, sh2_AsyncEvent_t *pEvent);
  *
  * See the SH-2 Reference Manual for more detail.
  */
+#define SH2_MAX_SENSOR_EVENT_LEN (16)
 typedef struct sh2_SensorEvent {
     uint64_t timestamp_uS;
-    uint8_t reportId;
-    uint8_t *pReport;
     uint8_t len;
+    union {
+        uint8_t reportId;
+        uint8_t report[SH2_MAX_SENSOR_EVENT_LEN];
+    };
 } sh2_SensorEvent_t;
 
 typedef void (sh2_SensorCallback_t)(void * cookie, sh2_SensorEvent_t *pEvent);
@@ -186,11 +189,13 @@ typedef struct sh2_SensorMetadata {
     uint16_t revision;  /**< @brief Metadata record format revision */
     uint16_t power_mA;    /**< @brief [mA] Fixed point 16Q10 format */
     uint32_t minPeriod_uS;  /**< @brief [uS] */
+    uint32_t maxPeriod_uS;  /**< @brief [uS] */
     uint32_t fifoReserved;  /**< @brief (Unused) */
     uint32_t fifoMax;  /**< @brief (Unused) */
     uint32_t batchBufferBytes;  /**< @brief (Unused) */
     uint16_t qPoint1;     /**< @brief q point for sensor values */
     uint16_t qPoint2;     /**< @brief q point for accuracy or bias fields */
+    uint16_t qPoint3;     /**< @brief q point for sensor data change sensitivity */
     uint32_t vendorIdLen; /**< @brief [bytes] */
     char vendorId[48];  /**< @brief Vendor name and part number */
     uint32_t sensorSpecificLen;  /**< @brief [bytes] */

@@ -30,6 +30,26 @@
 
 #include "sh2.h"
 
+/* Note on quaternion naming conventions:
+ * Quaternions are values with four real components that are usually
+ * interpreted as coefficients in the complex quantity, Q.
+ *
+ * As in, Q = W + Xi + Yj + Zk
+ *
+ * Where i, j and k represent the three imaginary dimensions.
+ *
+ * So W represents the Real components and X, Y and Z the Imaginary ones.
+ *
+ * In the Hillcrest datasheets and in this code, however, the four components
+ * are named real, i, j and k, to make it explicit which is which.  If you 
+ * need to translate these names into the "wxyz" or "xyzw" convention, then, the
+ * appropriate mapping is this:
+ *     w = real
+ *     x = i
+ *     y = j
+ *     z = k
+ */
+	
 /**
  * @brief Raw Accelerometer
  *

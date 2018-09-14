@@ -126,7 +126,8 @@ typedef struct shtp_s {
     uint32_t txDiscards;
     uint32_t shortFragments;
     uint32_t tooLargePayloads;
-    uint32_t badChannels;
+    uint32_t badRxChan;
+    uint32_t badTxChan;
 
 } shtp_t;
 
@@ -560,6 +561,13 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
       return;
     }
         
+    if ((chan >= SH2_MAX_CHANS) ||
+        (chan >= pShtp->nextChanListener)) {
+        // Invalid channel id.
+        pShtp->badRxChan++;
+        return;
+    }
+        
     // Discard earlier assembly in progress if the received data doesn't match it.
     if (pShtp->inRemaining) {
         // Check this against previously received data.
@@ -749,8 +757,8 @@ int shtp_send(void *pInstance,
     if (len > pShtp->outMaxPayload) {
         return SH2_ERR_BAD_PARAM;
     }
-    if (channel == 0xFF) {
-        pShtp->badChannels++;
+    if (channel >= SH2_MAX_CHANS) {
+        pShtp->badTxChan++;
         return SH2_ERR_BAD_PARAM;
     }
     
