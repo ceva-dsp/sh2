@@ -407,7 +407,7 @@ typedef struct sh2_HeartRateMonitor {
 } sh2_HeartRateMonitor_t;
 
 /**
- * @brief heartRateMonitor
+ * @brief Gyro Integrated Rotation Vector
  *
  * See SH-2 Reference Manual for details.
  */
@@ -420,6 +420,11 @@ typedef struct sh2_GyroIntegratedRV {
     float angVelY;  /**< @brief Angular velocity about y [rad/s] */
     float angVelZ;  /**< @brief Angular velocity about z [rad/s] */
 } sh2_GyroIntegratedRV_t;
+
+typedef struct sh2_IZroRequest {
+    sh2_IZroMotionIntent_t intent;
+    sh2_IZroMotionRequest_t request;
+} sh2_IZroRequest_t;
 
 typedef struct sh2_SensorValue {
     
@@ -488,6 +493,7 @@ typedef struct sh2_SensorValue {
         sh2_RotationVectorWAcc_t arvrStabilizedRV;
         sh2_RotationVector_t arvrStabilizedGRV;
         sh2_GyroIntegratedRV_t gyroIntegratedRV;
+        sh2_IZroRequest_t izroRequest;
     } un;
 } sh2_SensorValue_t;
 
