@@ -136,9 +136,10 @@ enum sh2_SensorId_e {
     SH2_ARVR_STABILIZED_RV = 0x28,
     SH2_ARVR_STABILIZED_GRV = 0x29,
     SH2_GYRO_INTEGRATED_RV = 0x2A,
+    SH2_IZRO_MOTION_REQUEST = 0x2B,
 
     // UPDATE to reflect greatest sensor id
-    SH2_MAX_SENSOR_ID = 0x2A,
+    SH2_MAX_SENSOR_ID = 0x2B,
 };
 typedef uint8_t sh2_SensorId_t;
 
@@ -275,7 +276,7 @@ typedef enum {
 
 /**
  * @brief Calibration result
- * 
+ *
  * See the SH-2 Reference Manual, Finish Calibration Response.
  */
 typedef enum {
@@ -365,6 +366,30 @@ typedef enum {
 #define FRS_ID_META_ARVR_STABILIZED_GRV          (0xE323)
 #define FRS_ID_META_GYRO_INTEGRATED_RV           (0xE324)
 
+/**
+ * @brief Interactive ZRO Motion Intent
+ *
+ * See the SH-2 Reference Manual, 6.4.13
+ */
+typedef enum {
+    SH2_IZRO_MI_UNKNOWN = 0,
+    SH2_IZRO_MI_STATIONARY_NO_VIBRATION,
+    SH2_IZRO_MI_STATIONARY_WITH_VIBRATION,
+    SH2_IZRO_MI_IN_MOTION,
+} sh2_IZroMotionIntent_t;
+
+/**
+ * @brief Interactive ZRO Motion Intent
+ *
+ * See the SH-2 Reference Manual, 6.4.13
+ */
+typedef enum {
+    SH2_IZRO_MR_NO_REQUEST = 0,
+    SH2_IZRO_MR_STAY_STATIONARY,
+    SH2_IZRO_MR_STATIONARY_NON_URGENT,
+    SH2_IZRO_MR_STATIONARY_URGENT,
+} sh2_IZroMotionRequest_t;
+
 
 /***************************************************************************************
  * Public API
@@ -372,7 +397,7 @@ typedef enum {
 
 /**
  * @brief Open a session with a sensor hub.
- * 
+ *
  * This function should be called before others in this API.
  * An instance of an SH2 HAL should be passed in.
  * This call will result in the open() function of the HAL being called.
@@ -390,18 +415,18 @@ int sh2_open(sh2_Hal_t *pHal,
 
 /**
  * @brief Close a session with a sensor hub.
- * 
+ *
  * This should be called at the end of a sensor hub session.  
  * The underlying SHTP and HAL instances will be closed.
- * 
+ *
  */
 void sh2_close(void);
 
 /**
  * @brief Service the SH2 device, reading any data that is available and dispatching callbacks.
- * 
+ *
  * This function should be called periodically by the host system to service an open sensor hub.
- * 
+ *
  */
 void sh2_service(void);
 
@@ -437,7 +462,7 @@ int sh2_devSleep(void);
 
 /**
  * @brief Get Product ID information from Sensorhub.
- * 
+ *
  * @param  prodIds Pointer to structure that will receive results.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -445,7 +470,7 @@ int sh2_getProdIds(sh2_ProductIds_t *prodIds);
 
 /**
  * @brief Get sensor configuration.
- * 
+ *
  * @param  sensorId Which sensor to query.
  * @param  config SensorConfig structure to store results.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
@@ -454,7 +479,7 @@ int sh2_getSensorConfig(sh2_SensorId_t sensorId, sh2_SensorConfig_t *config);
 
 /**
  * @brief Set sensor configuration. (e.g enable a sensor at a particular rate.)
- * 
+ *
  * @param  sensorId Which sensor to configure.
  * @param  pConfig Pointer to structure holding sensor configuration.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
@@ -463,7 +488,7 @@ int sh2_setSensorConfig(sh2_SensorId_t sensorId, const sh2_SensorConfig_t *pConf
 
 /**
  * @brief Get metadata related to a sensor.
- * 
+ *
  * @param  sensorId Which sensor to query.
  * @param  pData Pointer to structure to receive the results.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
@@ -472,7 +497,7 @@ int sh2_getMetadata(sh2_SensorId_t sensorId, sh2_SensorMetadata_t *pData);
 
 /**
  * @brief Get an FRS record.
- * 
+ *
  * @param  recordId Which FRS Record to retrieve.
  * @param  pData pointer to buffer to receive the results
  * @param[in] words Size of pData buffer, in 32-bit words.
@@ -483,7 +508,7 @@ int sh2_getFrs(uint16_t recordId, uint32_t *pData, uint16_t *words);
 
 /**
  * @brief Set an FRS record
- * 
+ *
  * @param  recordId Which FRS Record to set.
  * @param  pData pointer to buffer containing the new data.
  * @param  words number of 32-bit words to write.  (0 to delete record.)
@@ -493,7 +518,7 @@ int sh2_setFrs(uint16_t recordId, uint32_t *pData, uint16_t words);
 
 /**
  * @brief Get error counts.
- * 
+ *
  * @param  severity Only errors of this severity or greater are returned.
  * @param  pErrors Buffer to receive error codes.
  * @param  numErrors size of pErrors array
@@ -503,7 +528,7 @@ int sh2_getErrors(uint8_t severity, sh2_ErrorRecord_t *pErrors, uint16_t *numErr
 
 /**
  * @brief Read counters related to a sensor.
- * 
+ *
  * @param  sensorId Which sensor to operate on.
  * @param  pCounts Pointer to Counts structure that will receive data.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
@@ -512,7 +537,7 @@ int sh2_getCounts(sh2_SensorId_t sensorId, sh2_Counts_t *pCounts);
 
 /**
  * @brief Clear counters related to a sensor.
- * 
+ *
  * @param  sensorId which sensor to operate on.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -520,7 +545,7 @@ int sh2_clearCounts(sh2_SensorId_t sensorId);
 
 /**
  * @brief Perform a tare operation on one or more axes.
- * 
+ *
  * @param  axes Bit mask specifying which axes should be tared.
  * @param  basis Which rotation vector to use as the basis for Tare adjustment.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
@@ -530,21 +555,21 @@ int sh2_setTareNow(uint8_t axes,    // SH2_TARE_X | SH2_TARE_Y | SH2_TARE_Z
 
 /**
  * @brief Clears the previously applied tare operation.
- * 
+ *
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
 int sh2_clearTare(void);
 
 /**
  * @brief Persist the results of last tare operation to flash.
- * 
+ *
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
 int sh2_persistTare(void);
 
 /**
  * @brief Set the current run-time sensor reorientation. (Set to zero to clear tare.)
- * 
+ *
  * @param  orientation Quaternion rotation vector to apply as new tare.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -552,21 +577,21 @@ int sh2_setReorientation(sh2_Quaternion_t *orientation);
 
 /**
  * @brief Command the sensorhub to reset.
- * 
+ *
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
 int sh2_reinitialize(void);
 
 /**
  * @brief Save Dynamic Calibration Data to flash.
- * 
+ *
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
 int sh2_saveDcdNow(void);
 
 /**
  * @brief Get Oscillator type.
- * 
+ *
  * @param  pOscType pointer to data structure to receive results.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -580,7 +605,7 @@ int sh2_getOscType(sh2_OscType_t *pOscType);
 
 /**
  * @brief Enable/Disable dynamic calibration for certain sensors
- * 
+ *
  * @param  sensors Bit mask to configure which sensors are affected.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -588,7 +613,7 @@ int sh2_setCalConfig(uint8_t sensors);
 
 /**
  * @brief Get dynamic calibration configuration settings.
- * 
+ *
  * @param  pSensors pointer to Bit mask, set on return.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -596,7 +621,7 @@ int sh2_getCalConfig(uint8_t *pSensors);
 
 /**
  * @brief Configure automatic saving of dynamic calibration data.
- * 
+ *
  * @param  enabled Enable or Disable DCD auto-save.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -604,7 +629,7 @@ int sh2_setDcdAutoSave(bool enabled);
 
 /**
  * @brief Immediately issue all buffered sensor reports from a given sensor.
- * 
+ *
  * @param  sensorId Which sensor reports to flush.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -612,14 +637,14 @@ int sh2_flush(sh2_SensorId_t sensorId);
 
 /**
  * @brief Command clear DCD in RAM, then reset sensor hub.
- * 
+ *
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
 int sh2_clearDcdAndReset(void);
 
 /**
  * @brief Start simple self-calibration procedure.
- * 
+ *
  * @parameter interval_us sensor report interval, uS.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -627,10 +652,18 @@ int sh2_startCal(uint32_t interval_us);
 
 /**
  * @brief Finish simple self-calibration procedure.
- * 
+ *
  * @parameter status contains calibration status code on return.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
 int sh2_finishCal(sh2_CalStatus_t *status);
+
+/**
+ * @brief send Interactive ZRO Request.
+ *
+ * @parameter intent Inform the sensor hub what sort of motion should be in progress.
+ * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
+ */
+int sh2_setIZro(sh2_IZroMotionIntent_t intent);
 
 #endif

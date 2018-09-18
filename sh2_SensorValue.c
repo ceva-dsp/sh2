@@ -67,6 +67,7 @@ static int decodeHeartRateMonitor(sh2_SensorValue_t *value, const sh2_SensorEven
 static int decodeArvrStabilizedRV(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 static int decodeArvrStabilizedGRV(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 static int decodeGyroIntegratedRV(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
+static int decodeIZroRequest(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 
 // ------------------------------------------------------------------------
 // Public API
@@ -204,6 +205,9 @@ int sh2_decodeSensorEvent(sh2_SensorValue_t *value, const sh2_SensorEvent_t *eve
             break;
         case SH2_GYRO_INTEGRATED_RV:
             rc = decodeGyroIntegratedRV(value, event);
+            break;
+        case SH2_IZRO_MOTION_REQUEST:
+            rc = decodeIZroRequest(value, event);
             break;
         default:
             // Unknown report id
@@ -538,4 +542,10 @@ static int decodeGyroIntegratedRV(sh2_SensorValue_t *value, const sh2_SensorEven
     return SH2_OK;
 }
 
+static int decodeIZroRequest(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
+{
+    value->un.izroRequest.intent = event->report[4];
+    value->un.izroRequest.request = event->report[5];
 
+    return SH2_OK;
+}
