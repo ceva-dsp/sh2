@@ -1220,7 +1220,7 @@ static int sendCmd(sh2_t *pSh2, uint8_t cmd, uint8_t p[COMMAND_PARAMS])
     req.reportId = SENSORHUB_COMMAND_REQ;
     req.seq = pSh2->cmdSeq;
     req.command = cmd;
-    for (int n = 0; n < sizeof(p); n++) {
+    for (int n = 0; n < COMMAND_PARAMS; n++) {
         req.p[n] = p[n];
     }
     
@@ -1234,7 +1234,7 @@ static int sendCmd0(sh2_t *pSh2, uint8_t cmd)
 {
     uint8_t p[COMMAND_PARAMS];
 
-    memset(p, 0, sizeof(p));
+    memset(p, 0, COMMAND_PARAMS);
 
     return sendCmd(pSh2, cmd, p);
 }
@@ -1244,7 +1244,7 @@ static int sendCmd1(sh2_t *pSh2, uint8_t cmd, uint8_t p0)
 {
     uint8_t p[COMMAND_PARAMS];
 
-    memset(p, 0, sizeof(p));
+    memset(p, 0, COMMAND_PARAMS);
 
     p[0] = p0;
     return sendCmd(pSh2, cmd, p);
@@ -1255,7 +1255,7 @@ static int sendCmd2(sh2_t *pSh2, uint8_t cmd, uint8_t p0, uint8_t p1)
 {
     uint8_t p[COMMAND_PARAMS];
 
-    memset(p, 0, sizeof(p));
+    memset(p, 0, COMMAND_PARAMS);
     
     p[0] = p0;
     p[1] = p1;
@@ -1470,7 +1470,7 @@ static int setCalConfigStart(sh2_t *pSh2)
     uint8_t p[COMMAND_PARAMS];
 
     // Clear p.  (Importantly, set subcommand in p[3] to 0, CONFIGURE)
-    memset(p, 0, sizeof(p));
+    memset(p, 0, COMMAND_PARAMS);
     
     // Which cal processes to enable/disable
     p[0] = (pSh2->opData.calConfig.sensors & SH2_CAL_ACCEL) ? 1 : 0; // accel cal
@@ -1511,7 +1511,7 @@ static int getCalConfigStart(sh2_t *pSh2)
     uint8_t p[COMMAND_PARAMS];
 
     // Clear p.  (Importantly, set subcommand in p[3] to 0, CONFIGURE)
-    memset(p, 0, sizeof(p));
+    memset(p, 0, COMMAND_PARAMS);
     
     // Subcommand: Get ME Calibration
     p[3] = 0x01;
@@ -1590,7 +1590,7 @@ static int startCalStart(sh2_t *pSh2)
     uint8_t p[COMMAND_PARAMS];
 
     // Clear p.  (Importantly, set subcommand in p[3] to 0, CONFIGURE)
-    memset(p, 0, sizeof(p));
+    memset(p, 0, COMMAND_PARAMS);
     
     // Subcommand: Get ME Calibration
     p[0] = SH2_CAL_START;
