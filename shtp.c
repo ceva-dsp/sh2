@@ -424,8 +424,8 @@ static void processAdvertisement(shtp_t *pShtp, uint8_t *payload, uint16_t paylo
     uint32_t guid = 0;
     char appName[SHTP_APP_NAME_LEN];
     char chanName[SHTP_CHAN_NAME_LEN];
-    uint8_t chanNo;
-    bool wake;
+    uint8_t chanNo = 0;
+    bool wake = false;
 
     strcpy(appName, "");
     strcpy(chanName, "");
@@ -646,7 +646,7 @@ void *shtp_open(sh2_Hal_t *pHal)
     }
 
     // Clear the SHTP instance as a shortcut to initializing all fields
-    memset(pShtp, sizeof(shtp_t), 0);
+    memset(pShtp, 0, sizeof(shtp_t));
     
     // Store reference to the HAL
     pShtp->pHal = pHal;
