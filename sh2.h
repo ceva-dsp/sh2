@@ -38,7 +38,6 @@
 
 enum sh2_AsyncEventId_e {
     SH2_RESET,
-    SH2_FRS_CHANGE,
 };
 typedef enum sh2_AsyncEventId_e sh2_AsyncEventId_t;
     
@@ -49,7 +48,6 @@ typedef enum sh2_AsyncEventId_e sh2_AsyncEventId_t;
  */
 typedef struct sh2_AsyncEvent {
     uint32_t eventId;
-    uint16_t frsType;
 } sh2_AsyncEvent_t;
 
 typedef void (sh2_EventCallback_t)(void * cookie, sh2_AsyncEvent_t *pEvent);

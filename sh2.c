@@ -402,15 +402,6 @@ static void sensorhubControlHdlr(void *cookie, uint8_t *payload, uint16_t len, u
                     // This is an unsolicited INIT message.
                     // Is it time to call reset callback?
                 }
-                if (pResp->command == (SH2_CMD_FRS | SH2_INIT_UNSOLICITED))
-                {
-                    // This is an unsolicited FRS change message
-                    event.eventId = SH2_FRS_CHANGE;
-                    event.frsType = pResp->r[1] + (pResp->r[2] << 8);
-                    if (pSh2->eventCallback) {
-                        pSh2->eventCallback(pSh2->eventCookie, &event);
-                    }
-                }
             }
 
             // Hand off to operation in progress, if any
