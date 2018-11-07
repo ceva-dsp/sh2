@@ -36,22 +36,6 @@
  * Public type definitions
  ***************************************************************************************/
 
-enum sh2_AsyncEventId_e {
-    SH2_RESET,
-};
-typedef enum sh2_AsyncEventId_e sh2_AsyncEventId_t;
-    
-/**
- * @brief Asynchronous Event
- *
- * Represents reset events and other non-sensor events received from SH-2 sensor hub.
- */
-typedef struct sh2_AsyncEvent {
-    uint32_t eventId;
-} sh2_AsyncEvent_t;
-
-typedef void (sh2_EventCallback_t)(void * cookie, sh2_AsyncEvent_t *pEvent);
-
 /**
  * @brief Sensor Event
  *
@@ -387,6 +371,44 @@ typedef enum {
     SH2_IZRO_MR_STATIONARY_NON_URGENT,
     SH2_IZRO_MR_STATIONARY_URGENT,
 } sh2_IZroMotionRequest_t;
+
+
+/**
+* @brief Asynchronous Event
+*
+* Represents reset events and other non-sensor events received from SH-2 sensor hub.
+*/
+
+enum sh2_AsyncEventId_e {
+    SH2_RESET,
+    SH2_SHTP_EVENT,
+    SH2_GET_FEATURE_RESP,
+};
+typedef enum sh2_AsyncEventId_e sh2_AsyncEventId_t;
+
+enum sh2_ShtpEvent_e {
+    SH2_SHTP_TX_DISCARD = 0,
+    SH2_SHTP_SHORT_FRAGMENT = 1,
+    SH2_SHTP_TOO_LARGE_PAYLOADS = 2,
+    SH2_SHTP_BAD_RX_CHAN = 3,
+    SH2_SHTP_BAD_TX_CHAN = 4,
+};
+typedef uint8_t sh2_ShtpEvent_t;
+
+typedef struct sh2_SensorConfigResp_e {
+    sh2_SensorId_t sensorId;
+    sh2_SensorConfig_t sensorConfig;
+} sh2_SensorConfigResp_t;
+
+typedef struct sh2_AsyncEvent {
+    uint32_t eventId;
+    union {
+        sh2_ShtpEvent_t shtpEvent;
+        sh2_SensorConfigResp_t sh2SensorConfigResp;
+    };
+} sh2_AsyncEvent_t;
+
+typedef void (sh2_EventCallback_t)(void * cookie, sh2_AsyncEvent_t *pEvent);
 
 
 /***************************************************************************************

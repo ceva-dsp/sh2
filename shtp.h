@@ -41,9 +41,18 @@
 #define TAG_ADV_COUNT 10
 #define TAG_APP_SPECIFIC 0x80
 
+typedef enum shtp_Event_e {
+    SHTP_TX_DISCARD = 0,
+    SHTP_SHORT_FRAGMENT = 1,
+    SHTP_TOO_LARGE_PAYLOADS = 2,
+    SHTP_BAD_RX_CHAN = 3,
+    SHTP_BAD_TX_CHAN = 4,
+} shtp_Event_t;
+
 typedef void shtp_Callback_t(void * cookie, uint8_t *payload, uint16_t len, uint32_t timestamp);
 typedef void shtp_AdvertCallback_t(void * cookie, uint8_t tag, uint8_t len, uint8_t *value);
 typedef void shtp_SendCallback_t(void *cookie);
+typedef void shtp_EventCallback_t(void *cookie, shtp_Event_t shtpEvent);
 
 // Takes HAL pointer, returns shtp ID for use in future calls.
 // HAL will be opened by this call.
@@ -52,6 +61,9 @@ void * shtp_open(sh2_Hal_t *pHal);
 // Releases resources associated with this SHTP instance.
 // HAL will not be closed.
 void shtp_close(void *pShtp);
+
+// Provide the point of the callback function for reporting SHTP asynchronous events
+void shtp_setEventCallback(shtp_EventCallback_t * eventCallback, void *eventCookie);
 
 // Register a listener for an SHTP channel
 int shtp_listenChan(void *pShtp,

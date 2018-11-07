@@ -82,7 +82,7 @@
 #define SH2_CMD_INITIALIZE             4
 #define     SH2_INIT_SYSTEM                1
 #define     SH2_INIT_UNSOLICITED           0x80
-#define SH2_CMD_FRS                    5
+// #define SH2_CMD_FRS                    5 /* Depreciated */
 #define SH2_CMD_DCD                    6
 #define SH2_CMD_ME_CAL                 7
 #define SH2_CMD_DCD_SAVE               9
@@ -138,6 +138,37 @@ typedef PACKED_STRUCT {
     uint8_t reserved0;
     uint8_t reserved1;
 } ProdIdResp_t;
+
+// Report definitions
+// Bit fields for Feature Report flags
+#define FEAT_CHANGE_SENSITIVITY_RELATIVE (1)
+#define FEAT_CHANGE_SENSITIVITY_ABSOLUTE (0)
+#define FEAT_CHANGE_SENSITIVITY_ENABLED  (2)
+#define FEAT_CHANGE_SENSITIVITY_DISABLED (0)
+#define FEAT_WAKE_ENABLED                (4)
+#define FEAT_WAKE_DISABLED               (0)
+#define FEAT_ALWAYS_ON_ENABLED           (8)
+#define FEAT_ALWAYS_ON_DISABLED          (0)
+
+// GET_FEATURE_REQ
+#define SENSORHUB_GET_FEATURE_REQ    (0xFE)
+typedef PACKED_STRUCT{
+    uint8_t reportId;
+    uint8_t featureReportId;
+} GetFeatureReq_t;
+
+// SENSORHUB_GET_FEATURE_RESP
+#define SENSORHUB_GET_FEATURE_RESP   (0xFC)
+typedef PACKED_STRUCT{
+    uint8_t reportId;
+    uint8_t featureReportId;      // sensor id
+    uint8_t flags;                // FEAT_... values
+    uint16_t changeSensitivity;
+    uint32_t reportInterval_uS;
+    uint32_t batchInterval_uS;
+    uint32_t sensorSpecific;
+} GetFeatureResp_t;
+
 
 typedef struct sh2_s sh2_t;
 
@@ -291,6 +322,9 @@ typedef PACKED_STRUCT {
 // SH2 state
 sh2_t _sh2;
 
+// SH2 Async Event Message
+static sh2_AsyncEvent_t sh2AsyncEvent;
+
 // ------------------------------------------------------------------------
 // Private functions
 
@@ -368,7 +402,6 @@ static void sensorhubControlHdlr(void *cookie, uint8_t *payload, uint16_t len, u
     uint16_t cursor = 0;
     uint32_t count = 0;
     CommandResp_t * pResp = 0;
-    sh2_AsyncEvent_t event;
     
     if (len == 0) {
         pSh2->emptyPayloads++;
@@ -394,13 +427,33 @@ static void sensorhubControlHdlr(void *cookie, uint8_t *payload, uint16_t len, u
             return;
         }
         else {
-            // Check for unsolicited initialize response or FRS change response
+            // Check for unsolicited initialize response
             if (reportId == SENSORHUB_COMMAND_RESP) {
                 pResp = (CommandResp_t *)(payload+cursor);
                 if ((pResp->command == (SH2_CMD_INITIALIZE | SH2_INIT_UNSOLICITED)) &&
                     (pResp->r[1] == SH2_INIT_SYSTEM)) {
                     // This is an unsolicited INIT message.
                     // Is it time to call reset callback?
+                }
+
+            } // Check for Get Feature Response
+            else if (reportId == SENSORHUB_GET_FEATURE_RESP) {
+                if (pSh2->eventCallback) {
+                    GetFeatureResp_t * pGetFeatureResp;
+                    pGetFeatureResp = (GetFeatureResp_t *)(payload + cursor);
+
+                    sh2AsyncEvent.eventId = SH2_GET_FEATURE_RESP;
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorId = pGetFeatureResp->featureReportId;
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.changeSensitivityEnabled = ((pGetFeatureResp->flags & FEAT_CHANGE_SENSITIVITY_ENABLED) != 0);
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.changeSensitivityRelative = ((pGetFeatureResp->flags & FEAT_CHANGE_SENSITIVITY_RELATIVE) != 0);
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.wakeupEnabled = ((pGetFeatureResp->flags & FEAT_WAKE_ENABLED) != 0);
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.alwaysOnEnabled = ((pGetFeatureResp->flags & FEAT_ALWAYS_ON_ENABLED) != 0);
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.changeSensitivity = pGetFeatureResp->changeSensitivity;
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.reportInterval_us = pGetFeatureResp->reportInterval_uS;
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.batchInterval_us = pGetFeatureResp->batchInterval_uS;
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.sensorSpecific = pGetFeatureResp->sensorSpecific;
+
+                    pSh2->eventCallback(pSh2->eventCookie, &sh2AsyncEvent);
                 }
             }
 
@@ -582,7 +635,6 @@ static void executableAdvertHdlr(void *cookie, uint8_t tag, uint8_t len, uint8_t
 
 static void executableDeviceHdlr(void *cookie, uint8_t *payload, uint16_t len, uint32_t timestamp)
 {
-    sh2_AsyncEvent_t event;
     sh2_t *pSh2 = (sh2_t *)cookie;
 
     // Discard if length is bad
@@ -597,9 +649,9 @@ static void executableDeviceHdlr(void *cookie, uint8_t *payload, uint16_t len, u
             pSh2->resetComplete = true;
             
             // Notify client that reset is complete.
-            event.eventId = SH2_RESET;
+            sh2AsyncEvent.eventId = SH2_RESET;
             if (pSh2->eventCallback) {
-                pSh2->eventCallback(pSh2->eventCookie, &event);
+                pSh2->eventCallback(pSh2->eventCookie, &sh2AsyncEvent);
             }
             break;
         default:
@@ -699,36 +751,6 @@ const sh2_Op_t getProdIdOp = {
 
 // ------------------------------------------------------------------------
 // Set Sensor Config
-
-// Report definitions
-// Bit fields for Feature Report flags
-#define FEAT_CHANGE_SENSITIVITY_RELATIVE (1)
-#define FEAT_CHANGE_SENSITIVITY_ABSOLUTE (0)
-#define FEAT_CHANGE_SENSITIVITY_ENABLED  (2)
-#define FEAT_CHANGE_SENSITIVITY_DISABLED (0)
-#define FEAT_WAKE_ENABLED                (4)
-#define FEAT_WAKE_DISABLED               (0)
-#define FEAT_ALWAYS_ON_ENABLED           (8)
-#define FEAT_ALWAYS_ON_DISABLED          (0)
-
-// GET_FEATURE_REQ
-#define SENSORHUB_GET_FEATURE_REQ    (0xFE)
-typedef PACKED_STRUCT {
-    uint8_t reportId;
-    uint8_t featureReportId;
-} GetFeatureReq_t;
-
-// SENSORHUB_GET_FEATURE_RESP
-#define SENSORHUB_GET_FEATURE_RESP   (0xFC)
-typedef PACKED_STRUCT {
-    uint8_t reportId;
-    uint8_t featureReportId;      // sensor id
-    uint8_t flags;                // FEAT_... values
-    uint16_t changeSensitivity;
-    uint32_t reportInterval_uS;
-    uint32_t batchInterval_uS;
-    uint32_t sensorSpecific;
-} GetFeatureResp_t;
 
 static int getSensorConfigStart(sh2_t *pSh2)
 {
@@ -1644,6 +1666,20 @@ const sh2_Op_t finishCalOp = {
     .rx = finishCalRx,
 };
 
+
+// ------------------------------------------------------------------------
+// SHTP Event Callback
+
+static void shtpEventCallback(void *cookie, shtp_Event_t shtpEvent) {
+    sh2_t *pSh2 = &_sh2;
+
+    sh2AsyncEvent.eventId = SH2_SHTP_EVENT;
+    sh2AsyncEvent.shtpEvent = shtpEvent;
+    if (pSh2->eventCallback) {
+        pSh2->eventCallback(pSh2->eventCookie, &sh2AsyncEvent);
+    }
+}
+
 // ------------------------------------------------------------------------
 // Public functions
 
@@ -1689,6 +1725,9 @@ int sh2_open(sh2_Hal_t *pHal,
         // Error opening SHTP
         return SH2_ERR;
     }
+
+    // Register SHTP event callback
+    shtp_setEventCallback(shtpEventCallback, pSh2);
 
     // Register with SHTP
     // Register SH2 handlers

@@ -87,6 +87,10 @@ typedef struct shtp_s {
     // If 0, this indicates the SHTP instance is available for new opens
     sh2_Hal_t *pHal;
 
+    // Asynchronous Event callback and it's cookie
+    shtp_EventCallback_t *eventCallback;
+    void * eventCookie;
+
     // Data from adverts
     char shtpVersion[8];
     uint16_t outMaxPayload;
@@ -558,6 +562,10 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
     
     if (payloadLen < SHTP_HDR_LEN) {
       pShtp->shortFragments++;
+
+      if (pShtp->eventCallback) {
+          pShtp->eventCallback(pShtp->eventCookie, SHTP_SHORT_FRAGMENT);
+      }
       return;
     }
         
@@ -565,6 +573,10 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
         (chan >= pShtp->nextChanListener)) {
         // Invalid channel id.
         pShtp->badRxChan++;
+
+        if (pShtp->eventCallback) {
+            pShtp->eventCallback(pShtp->eventCookie, SHTP_BAD_RX_CHAN);
+        }
         return;
     }
         
@@ -583,6 +595,10 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
         if (payloadLen > sizeof(pShtp->inPayload)) {
             // Error: This payload won't fit! Discard it.
             pShtp->tooLargePayloads++;
+            
+            if (pShtp->eventCallback) {
+                pShtp->eventCallback(pShtp->eventCookie, SHTP_TOO_LARGE_PAYLOADS);
+            }
             return;
         }
 
@@ -651,6 +667,10 @@ void *shtp_open(sh2_Hal_t *pHal)
     // Store reference to the HAL
     pShtp->pHal = pHal;
 
+    // Clear the asynchronous event callback point
+    pShtp->eventCallback = 0;
+    pShtp->eventCookie = 0;
+
     // Initialize state vars (be prepared for adverts)
     pShtp->outMaxPayload = SH2_HAL_MAX_PAYLOAD_OUT;
     pShtp->outMaxTransfer = SH2_HAL_MAX_TRANSFER_OUT;
@@ -684,6 +704,19 @@ void shtp_close(void *pInstance)
     // Clear pShtp
     // (Resetting pShtp->pHal to 0, returns this instance to the free pool)
     memset(pShtp, 0, sizeof(shtp_t));
+}
+
+// Register the pointer of the callback function for reporting asynchronous events
+void shtp_setEventCallback(shtp_EventCallback_t * eventCallback, void *eventCookie) {
+    // Find an available instance for this open
+    shtp_t *pShtp = getInstance();
+    if (pShtp == 0) {
+        // No instances available, return error
+        return 0;
+    }
+
+    pShtp->eventCallback = eventCallback;
+    pShtp->eventCookie = eventCookie;
 }
 
 // Register a listener for an SHTP channel
@@ -787,4 +820,3 @@ void shtp_service(void *pInstance)
         rxAssemble(pShtp, pShtp->inTransfer, len, t_us);
     }
 }
-
