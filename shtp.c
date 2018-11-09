@@ -579,7 +579,7 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
         }
         return;
     }
-        
+
     // Discard earlier assembly in progress if the received data doesn't match it.
     if (pShtp->inRemaining) {
         // Check this against previously received data.
@@ -707,13 +707,10 @@ void shtp_close(void *pInstance)
 }
 
 // Register the pointer of the callback function for reporting asynchronous events
-void shtp_setEventCallback(shtp_EventCallback_t * eventCallback, void *eventCookie) {
-    // Find an available instance for this open
-    shtp_t *pShtp = getInstance();
-    if (pShtp == 0) {
-        // No instances available, return error
-        return 0;
-    }
+void shtp_setEventCallback(void *pInstance, 
+                           shtp_EventCallback_t * eventCallback, 
+                           void *eventCookie) {
+    shtp_t *pShtp = (shtp_t *)pInstance;
 
     pShtp->eventCallback = eventCallback;
     pShtp->eventCookie = eventCookie;

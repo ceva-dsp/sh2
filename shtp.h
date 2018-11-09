@@ -63,7 +63,9 @@ void * shtp_open(sh2_Hal_t *pHal);
 void shtp_close(void *pShtp);
 
 // Provide the point of the callback function for reporting SHTP asynchronous events
-void shtp_setEventCallback(shtp_EventCallback_t * eventCallback, void *eventCookie);
+void shtp_setEventCallback(void *pInstance,
+                           shtp_EventCallback_t * eventCallback, 
+                           void *eventCookie);
 
 // Register a listener for an SHTP channel
 int shtp_listenChan(void *pShtp,

@@ -1727,7 +1727,7 @@ int sh2_open(sh2_Hal_t *pHal,
     }
 
     // Register SHTP event callback
-    shtp_setEventCallback(shtpEventCallback, pSh2);
+    shtp_setEventCallback(pSh2->pShtp, shtpEventCallback, &_sh2);
 
     // Register with SHTP
     // Register SH2 handlers
