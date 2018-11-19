@@ -45,10 +45,8 @@
 typedef struct sh2_SensorEvent {
     uint64_t timestamp_uS;
     uint8_t len;
-    union {
-        uint8_t reportId;
-        uint8_t report[SH2_MAX_SENSOR_EVENT_LEN];
-    };
+    uint8_t reportId;
+    uint8_t report[SH2_MAX_SENSOR_EVENT_LEN];
 } sh2_SensorEvent_t;
 
 typedef void (sh2_SensorCallback_t)(void * cookie, sh2_SensorEvent_t *pEvent);
