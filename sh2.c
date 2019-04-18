@@ -2186,6 +2186,8 @@ int sh2_getOscType(sh2_OscType_t *pOscType)
 {
     sh2_t *pSh2 = &_sh2;
 
+    pSh2->opData.getOscType.pOscType = pOscType;
+
     return opProcess(pSh2, &getOscTypeOp);
 }
 
