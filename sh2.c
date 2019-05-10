@@ -672,7 +672,7 @@ static int sendCtrl(sh2_t *pSh2, const uint8_t *data, uint16_t len)
 
 static int16_t toQ14(double x)
 {
-    int16_t retval = (int16_t)(x * (2<<14));
+    int16_t retval = (int16_t)(x * (1<<14));
     
     return retval;
 }

@@ -544,8 +544,8 @@ static int decodeGyroIntegratedRV(sh2_SensorValue_t *value, const sh2_SensorEven
 
 static int decodeIZroRequest(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
 {
-    value->un.izroRequest.intent = event->report[4];
-    value->un.izroRequest.request = event->report[5];
+    value->un.izroRequest.intent = (sh2_IZroMotionIntent_t)event->report[4];
+    value->un.izroRequest.request = (sh2_IZroMotionRequest_t)event->report[5];
 
     return SH2_OK;
 }
