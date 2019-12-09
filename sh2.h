@@ -117,10 +117,10 @@ enum sh2_SensorId_e {
     SH2_ARVR_STABILIZED_GRV = 0x29,
     SH2_GYRO_INTEGRATED_RV = 0x2A,
     SH2_IZRO_MOTION_REQUEST = 0x2B,
-    SH2_RAW_OPTICAL_FLOW = 0x55,  // ### TODO-DW : Raw Optical Flow sensor
+    SH2_RAW_OPTICAL_FLOW = 0x2C,
 
     // UPDATE to reflect greatest sensor id
-    SH2_MAX_SENSOR_ID = 0x2B,
+    SH2_MAX_SENSOR_ID = 0x2C,
 };
 typedef uint8_t sh2_SensorId_t;
 
@@ -346,6 +346,7 @@ typedef enum {
 #define FRS_ID_META_ARVR_STABILIZED_RV           (0xE322)
 #define FRS_ID_META_ARVR_STABILIZED_GRV          (0xE323)
 #define FRS_ID_META_GYRO_INTEGRATED_RV           (0xE324)
+#define FRS_ID_META_RAW_OPTICAL_FLOW             (0xE326)
 
 /**
  * @brief Interactive ZRO Motion Intent
