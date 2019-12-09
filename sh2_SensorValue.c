@@ -68,6 +68,7 @@ static int decodeArvrStabilizedRV(sh2_SensorValue_t *value, const sh2_SensorEven
 static int decodeArvrStabilizedGRV(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 static int decodeGyroIntegratedRV(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 static int decodeIZroRequest(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
+static int decodeRawOptFlow(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 
 // ------------------------------------------------------------------------
 // Public API
@@ -208,6 +209,9 @@ int sh2_decodeSensorEvent(sh2_SensorValue_t *value, const sh2_SensorEvent_t *eve
             break;
         case SH2_IZRO_MOTION_REQUEST:
             rc = decodeIZroRequest(value, event);
+            break;
+        case SH2_RAW_OPTICAL_FLOW:
+            rc = decodeRawOptFlow(value, event);
             break;
         default:
             // Unknown report id
@@ -549,3 +553,21 @@ static int decodeIZroRequest(sh2_SensorValue_t *value, const sh2_SensorEvent_t *
 
     return SH2_OK;
 }
+
+static int decodeRawOptFlow(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event)
+{
+    // Decode Raw optical flow
+    value->un.rawOptFlow.dx = read16(&event->report[4]);
+    value->un.rawOptFlow.dy = read16(&event->report[6]);
+    value->un.rawOptFlow.iq = read16(&event->report[8]);
+    value->un.rawOptFlow.resX = read8(&event->report[10]);
+    value->un.rawOptFlow.resY = read8(&event->report[11]);
+    value->un.rawOptFlow.shutter = read8(&event->report[12]);
+    value->un.rawOptFlow.frameMax = read8(&event->report[13]);
+    value->un.rawOptFlow.frameAvg = read8(&event->report[14]);
+    value->un.rawOptFlow.frameMin = read8(&event->report[15]);
+    value->un.rawOptFlow.laserOn = read8(&event->report[16]);
+    
+    return SH2_OK;
+}
+

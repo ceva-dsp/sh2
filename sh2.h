@@ -117,6 +117,7 @@ enum sh2_SensorId_e {
     SH2_ARVR_STABILIZED_GRV = 0x29,
     SH2_GYRO_INTEGRATED_RV = 0x2A,
     SH2_IZRO_MOTION_REQUEST = 0x2B,
+    SH2_RAW_OPTICAL_FLOW = 0x55,  // ### TODO-DW : Raw Optical Flow sensor
 
     // UPDATE to reflect greatest sensor id
     SH2_MAX_SENSOR_ID = 0x2B,

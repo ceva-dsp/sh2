@@ -426,6 +426,19 @@ typedef struct sh2_IZroRequest {
     sh2_IZroMotionRequest_t request;
 } sh2_IZroRequest_t;
 
+typedef struct sh2_RawOptFlow {
+    int16_t dx;
+    int16_t dy;
+    int16_t iq;
+    uint8_t resX;
+    uint8_t resY;
+    uint8_t shutter;
+    uint8_t frameMax;
+    uint8_t frameAvg;
+    uint8_t frameMin;
+    uint8_t laserOn;
+} sh2_RawOptFlow_t;
+
 typedef struct sh2_SensorValue {
     
     /** Which sensor produced this event. */
@@ -494,6 +507,7 @@ typedef struct sh2_SensorValue {
         sh2_RotationVector_t arvrStabilizedGRV;
         sh2_GyroIntegratedRV_t gyroIntegratedRV;
         sh2_IZroRequest_t izroRequest;
+        sh2_RawOptFlow_t rawOptFlow;
     } un;
 } sh2_SensorValue_t;
 
