@@ -371,11 +371,16 @@ static void sensorhubAdvertHdlr(void *cookie, uint8_t tag, uint8_t len, uint8_t 
                 // Hub gave us more report lengths than we can store!
                 reports = SH2_MAX_REPORT_IDS;
             }
-        
-            for (int n = 0; n < reports; n++) {
+
+            int n;
+            for (n = 0; n < reports; n++) {
                 pSh2->report[n].id = value[n*2];
                 pSh2->report[n].len = value[n*2 + 1];
             }
+
+            // TODO-DW : Remove after this is added to adverts
+            pSh2->report[n].id = SH2_RAW_OPTICAL_FLOW;
+            pSh2->report[n].len = 17;
             break;
         }
     
