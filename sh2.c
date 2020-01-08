@@ -380,7 +380,7 @@ static void sensorhubAdvertHdlr(void *cookie, uint8_t tag, uint8_t len, uint8_t 
 
             // TODO-DW : Remove after this is added to adverts
             pSh2->report[n].id = SH2_RAW_OPTICAL_FLOW;
-            pSh2->report[n].len = 17;
+            pSh2->report[n].len = 18;
             break;
         }
     
