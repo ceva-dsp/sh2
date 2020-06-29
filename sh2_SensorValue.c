@@ -567,6 +567,8 @@ static int decodeRawOptFlow(sh2_SensorValue_t *value, const sh2_SensorEvent_t *e
     value->un.rawOptFlow.frameAvg = read8(&event->report[14]);
     value->un.rawOptFlow.frameMin = read8(&event->report[15]);
     value->un.rawOptFlow.laserOn = read8(&event->report[16]);
+    value->un.rawOptFlow.dt = read16(&event->report[18]);
+    value->un.rawOptFlow.timestamp = read32(&event->report[20]);
     
     return SH2_OK;
 }

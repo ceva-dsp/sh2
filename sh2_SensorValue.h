@@ -427,6 +427,8 @@ typedef struct sh2_IZroRequest {
 } sh2_IZroRequest_t;
 
 typedef struct sh2_RawOptFlow {
+    uint32_t timestamp;
+    int16_t dt;
     int16_t dx;
     int16_t dy;
     int16_t iq;
