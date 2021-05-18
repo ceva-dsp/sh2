@@ -34,6 +34,7 @@
 #include "sh2_util.h"
 
 #include <string.h>
+#include <stdio.h>
 
 // ------------------------------------------------------------------------
 // Private type definitions
@@ -95,6 +96,8 @@
 #define     SH2_BL_MODE_REQ                 0
 #define     SH2_BL_STATUS_REQ               1
 #define SH2_CMD_INTERACTIVE_ZRO        0x0E     /* SH-2 Reference Manual 6.4.13 */
+#define SH2_CMD_WHEEL_REQ              0x0F
+#define SH2_CMD_DR_CAL_SAVE            0x10
 
 // SENSORHUB_COMMAND_REQ
 #define SENSORHUB_COMMAND_REQ        (0xF2)
@@ -247,6 +250,12 @@ typedef union {
     struct {
         sh2_CalStatus_t status;
     } finishCal;
+    struct {
+        uint8_t wheelIndex;
+        uint32_t timestamp;
+        int16_t wheelData;
+        uint8_t dataType;
+    } wheelRequest;
 } sh2_OpData_t;
 
 // Max length of an FRS record, words.
@@ -388,6 +397,9 @@ static void sensorhubAdvertHdlr(void *cookie, uint8_t tag, uint8_t len, uint8_t 
             // TODO-DW : Remove after this is added to adverts
             pSh2->report[n].id = SH2_RAW_OPTICAL_FLOW;
             pSh2->report[n].len = 24;
+            n++;
+            pSh2->report[n].id = SH2_DEAD_RECKONING_POSE;
+            pSh2->report[n].len = 60;
             break;
         }
     
@@ -500,7 +512,6 @@ static int opProcess(sh2_t *pSh2, const sh2_Op_t *pOp)
     }
 
     uint32_t now_us = start_us;
-    
     // While op not complete and not timed out.
     while ((pSh2->pOp != 0) &&
            ((pOp->timeout_us == 0) ||
@@ -1254,7 +1265,6 @@ static int sendCmd(sh2_t *pSh2, uint8_t cmd, uint8_t p[COMMAND_PARAMS])
     for (int n = 0; n < COMMAND_PARAMS; n++) {
         req.p[n] = p[n];
     }
-    
     rc = sendCtrl(pSh2, (uint8_t *)&req, sizeof(req));
     
     return rc;
@@ -1678,6 +1688,30 @@ static void finishCalRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 const sh2_Op_t finishCalOp = {
     .start = finishCalStart,
     .rx = finishCalRx,
+};
+
+// -----------------------------------------------------------------------
+static int sendWheelOpStart(sh2_t *pSh2)
+{
+    uint8_t p[COMMAND_PARAMS];
+    memset(p, 0, COMMAND_PARAMS);
+    p[0] = pSh2->opData.wheelRequest.wheelIndex;
+    p[1] = (pSh2->opData.wheelRequest.timestamp >> 0) & 0xFF; 
+    p[2] = (pSh2->opData.wheelRequest.timestamp >> 8) & 0xFF;
+    p[3] = (pSh2->opData.wheelRequest.timestamp >> 16) & 0xFF;
+    p[4] = (pSh2->opData.wheelRequest.timestamp >> 24) & 0xFF;
+    p[5] = (pSh2->opData.wheelRequest.wheelData >> 0) & 0xFF;
+    p[6] = (pSh2->opData.wheelRequest.wheelData >> 8) & 0xFF;
+    p[7] = pSh2->opData.wheelRequest.dataType;
+    int status = sendCmd(pSh2, SH2_CMD_WHEEL_REQ, p);
+    opCompleted(pSh2, status);
+    return status;
+}
+
+
+const sh2_Op_t sendWheelOp = {
+    .start = sendWheelOpStart,
+    .timeout_us = 5000000,
 };
 
 
@@ -2341,5 +2375,27 @@ int sh2_setIZro(sh2_IZroMotionIntent_t intent)
     pSh2->opData.sendCmd.req.p[0] = intent;
 
     // Send command
+    return opProcess(pSh2, &sendCmdOp);
+}
+
+
+int sh2_reportWheelEncoder(uint8_t wheelIndex, uint32_t timestamp, int16_t wheelData, uint8_t dataType){
+    sh2_t *pSh2 = &_sh2;
+    //No callback (am i doing this right?)
+    pSh2->pOp = 0;
+    memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
+    pSh2->opData.wheelRequest.wheelIndex = wheelIndex;
+    pSh2->opData.wheelRequest.timestamp = timestamp;
+    pSh2->opData.wheelRequest.wheelData = wheelData;
+    pSh2->opData.wheelRequest.dataType = dataType;
+    int rc = opProcess(pSh2, &sendWheelOp);
+    return rc;
+}
+
+int sh2_saveDeadReckoningCalNow(void){
+    sh2_t *pSh2 = &_sh2;
+    memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
+    pSh2->opData.sendCmd.req.command = SH2_CMD_DR_CAL_SAVE;
+
     return opProcess(pSh2, &sendCmdOp);
 }

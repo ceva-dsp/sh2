@@ -441,6 +441,24 @@ typedef struct sh2_RawOptFlow {
     uint8_t laserOn;
 } sh2_RawOptFlow_t;
 
+typedef struct sh2_DeadReckoningPose {
+    uint32_t timestamp;
+    float linPosX;
+    float linPosY;
+    float linPosZ;
+    float real;
+    float i;
+    float j;
+    float k;
+    float linVelX;
+    float linVelY;
+    float linVelZ;
+    float angVelX;
+    float angVelY;
+    float angVelZ;
+} sh2_DeadReckoningPose_t;
+
+
 typedef struct sh2_SensorValue {
     
     /** Which sensor produced this event. */
@@ -510,6 +528,7 @@ typedef struct sh2_SensorValue {
         sh2_GyroIntegratedRV_t gyroIntegratedRV;
         sh2_IZroRequest_t izroRequest;
         sh2_RawOptFlow_t rawOptFlow;
+        sh2_DeadReckoningPose_t deadReckoningPose;
     } un;
 } sh2_SensorValue_t;
 

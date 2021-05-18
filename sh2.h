@@ -118,9 +118,10 @@ enum sh2_SensorId_e {
     SH2_GYRO_INTEGRATED_RV = 0x2A,
     SH2_IZRO_MOTION_REQUEST = 0x2B,
     SH2_RAW_OPTICAL_FLOW = 0x2C,
+    SH2_DEAD_RECKONING_POSE = 0x2D,
 
     // UPDATE to reflect greatest sensor id
-    SH2_MAX_SENSOR_ID = 0x2C,
+    SH2_MAX_SENSOR_ID = 0x2D,
 };
 typedef uint8_t sh2_SensorId_t;
 
@@ -316,6 +317,17 @@ typedef enum {
 #define ME_TIME_SOURCE_SELECT                    (0xD403)
 #define UART_FORMAT                              (0xA1A1)
 #define GYRO_INTEGRATED_RV_CONFIG                (0xA1A2)
+#define DR_OF_CONFIG                             (0xDED0)
+#define DR_WHEEL_CONFIG                          (0xDED1)
+#define DR_IMU_CONFIG                            (0xDED2)
+#define DR_VEL_EST_CONFIG                        (0xDED3)
+#define DR_SYNC_CONFIG                           (0xDED4)
+#define DR_QUAL_CONFIG                           (0xDED5)
+#define DR_CAL_CONFIG                            (0xDED6)
+#define DR_FUSION_CONFIG                         (0xDED7)
+#define DR_LIGHT_REC_CONFIG                      (0xDED8)
+#define DR_CAL                                   (0xDEDC)
+#define DR_WHEEL_SELECT                          (0xDEDF)
 #define FRS_ID_META_RAW_ACCELEROMETER            (0xE301)
 #define FRS_ID_META_ACCELEROMETER                (0xE302)
 #define FRS_ID_META_LINEAR_ACCELERATION          (0xE303)
@@ -692,5 +704,23 @@ int sh2_finishCal(sh2_CalStatus_t *status);
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
 int sh2_setIZro(sh2_IZroMotionIntent_t intent);
+
+/**
+ * @brief Report wheel position/velocity to sensor hub.
+ * @parameter wheelIndex platform-dependent: 0= left, 1= right for
+ *   typical differential drive robot
+ * @parameter timestamp microsecond timestamp (hub scale) of measurement
+ * @parameter wheelData raw wheel position or velocity
+ * @parameter dataType 0 if data is position, 1 if data is velocity
+ * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
+ */
+int sh2_reportWheelEncoder(uint8_t wheelIndex, uint32_t timestamp, int16_t wheelData, uint8_t dataType);
+
+/**
+ * @brief Save Dead Reckoning Calibration Data to flash.
+ *
+ * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
+ */
+int sh2_saveDeadReckoningCalNow(void);
 
 #endif

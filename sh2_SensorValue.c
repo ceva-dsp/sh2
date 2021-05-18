@@ -23,6 +23,8 @@
 #include "sh2_err.h"
 #include "sh2_util.h"
 
+#include <stdio.h>
+
 #define SCALE_Q(n) (1.0f / (1 << n))
 
 const float scaleRadToDeg = 180.0 / 3.14159265358;
@@ -69,6 +71,7 @@ static int decodeArvrStabilizedGRV(sh2_SensorValue_t *value, const sh2_SensorEve
 static int decodeGyroIntegratedRV(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 static int decodeIZroRequest(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 static int decodeRawOptFlow(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
+static int decodeDeadReckoningPose(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 
 // ------------------------------------------------------------------------
 // Public API
@@ -212,6 +215,9 @@ int sh2_decodeSensorEvent(sh2_SensorValue_t *value, const sh2_SensorEvent_t *eve
             break;
         case SH2_RAW_OPTICAL_FLOW:
             rc = decodeRawOptFlow(value, event);
+            break;
+        case SH2_DEAD_RECKONING_POSE:
+            rc = decodeDeadReckoningPose(value, event);
             break;
         default:
             // Unknown report id
@@ -573,3 +579,20 @@ static int decodeRawOptFlow(sh2_SensorValue_t *value, const sh2_SensorEvent_t *e
     return SH2_OK;
 }
 
+static int decodeDeadReckoningPose(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event){
+    value->un.deadReckoningPose.timestamp = read32(&event->report[4]);
+    value->un.deadReckoningPose.linPosX = read32(&event->report[8]) * SCALE_Q(17);
+    value->un.deadReckoningPose.linPosY = read32(&event->report[12]) * SCALE_Q(17);
+    value->un.deadReckoningPose.linPosZ = read32(&event->report[16]) * SCALE_Q(17);
+    value->un.deadReckoningPose.real = read32(&event->report[20]) * SCALE_Q(30);
+    value->un.deadReckoningPose.i = read32(&event->report[20]) * SCALE_Q(30);
+    value->un.deadReckoningPose.j = read32(&event->report[24]) * SCALE_Q(30);
+    value->un.deadReckoningPose.k = read32(&event->report[28]) * SCALE_Q(30);
+    value->un.deadReckoningPose.linVelX = read32(&event->report[32]) * SCALE_Q(25);
+    value->un.deadReckoningPose.linVelY = read32(&event->report[36]) * SCALE_Q(25);
+    value->un.deadReckoningPose.linVelZ = read32(&event->report[40]) * SCALE_Q(25);
+    value->un.deadReckoningPose.angVelX = read32(&event->report[44]) * SCALE_Q(25);
+    value->un.deadReckoningPose.angVelY = read32(&event->report[48]) * SCALE_Q(25);
+    value->un.deadReckoningPose.angVelZ = read32(&event->report[52]) * SCALE_Q(25);
+    return SH2_OK;
+}
