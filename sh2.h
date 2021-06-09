@@ -41,7 +41,7 @@
  *
  * See the SH-2 Reference Manual for more detail.
  */
-#define SH2_MAX_SENSOR_EVENT_LEN (16)
+#define SH2_MAX_SENSOR_EVENT_LEN (60)
 typedef struct sh2_SensorEvent {
     uint64_t timestamp_uS;
     uint8_t len;
