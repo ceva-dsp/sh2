@@ -141,14 +141,22 @@ typedef PACKED_STRUCT {
 
 // Report definitions
 // Bit fields for Feature Report flags
-#define FEAT_CHANGE_SENSITIVITY_RELATIVE (1)
-#define FEAT_CHANGE_SENSITIVITY_ABSOLUTE (0)
-#define FEAT_CHANGE_SENSITIVITY_ENABLED  (2)
-#define FEAT_CHANGE_SENSITIVITY_DISABLED (0)
-#define FEAT_WAKE_ENABLED                (4)
-#define FEAT_WAKE_DISABLED               (0)
-#define FEAT_ALWAYS_ON_ENABLED           (8)
-#define FEAT_ALWAYS_ON_DISABLED          (0)
+#define FEAT_CHANGE_SENSITIVITY_MODE_BIT   0
+#define FEAT_CHANGE_SENSITIVITY_ENABLE_BIT 1
+#define FEAT_WAKEUP_ENABLE_BIT             2
+#define FEAT_ALWAYS_ON_ENABLE_BIT          3
+#define FEAT_SNIFF_ENABLE_BIT              4
+#define FEAT_CHANGE_SENSITIVITY_RELATIVE   (1 << FEAT_CHANGE_SENSITIVITY_MODE_BIT)
+#define FEAT_CHANGE_SENSITIVITY_ABSOLUTE   (0 << FEAT_CHANGE_SENSITIVITY_MODE_BIT)
+#define FEAT_CHANGE_SENSITIVITY_ENABLED    (1 << FEAT_CHANGE_SENSITIVITY_ENABLE_BIT)
+#define FEAT_CHANGE_SENSITIVITY_DISABLED   (0 << FEAT_CHANGE_SENSITIVITY_ENABLE_BIT)
+#define FEAT_WAKE_ENABLED                  (1 << FEAT_WAKEUP_ENABLE_BIT)
+#define FEAT_WAKE_DISABLED                 (0 << FEAT_WAKEUP_ENABLE_BIT)
+#define FEAT_ALWAYS_ON_ENABLED             (1 << FEAT_ALWAYS_ON_ENABLE_BIT)
+#define FEAT_ALWAYS_ON_DISABLED            (0 << FEAT_ALWAYS_ON_ENABLE_BIT)
+#define FEAT_SNIFF_ENABLED                 (1 << FEAT_SNIFF_ENABLE_BIT)
+#define FEAT_SNIFF_DISABLED                (0 << FEAT_SNIFF_ENABLE_BIT)
+
 
 // GET_FEATURE_REQ
 #define SENSORHUB_GET_FEATURE_REQ    (0xFE)
@@ -786,6 +794,7 @@ static void getSensorConfigRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
     pConfig->changeSensitivityRelative = ((resp->flags & FEAT_CHANGE_SENSITIVITY_RELATIVE) != 0);
     pConfig->wakeupEnabled = ((resp->flags & FEAT_WAKE_ENABLED) != 0);
     pConfig->alwaysOnEnabled = ((resp->flags & FEAT_ALWAYS_ON_ENABLED) != 0);
+    pConfig->sniffEnabled = ((resp->flags & FEAT_SNIFF_ENABLED) !=0);
     pConfig->changeSensitivity = resp->changeSensitivity;
     pConfig->reportInterval_us = resp->reportInterval_uS;
     pConfig->batchInterval_us = resp->batchInterval_uS;
@@ -828,6 +837,7 @@ static int setSensorConfigStart(sh2_t *pSh2)
     if (pConfig->changeSensitivityRelative) flags |= FEAT_CHANGE_SENSITIVITY_RELATIVE;
     if (pConfig->wakeupEnabled)             flags |= FEAT_WAKE_ENABLED;
     if (pConfig->alwaysOnEnabled)           flags |= FEAT_ALWAYS_ON_ENABLED;
+    if (pConfig->sniffEnabled)              flags |= FEAT_SNIFF_ENABLED;
 
     memset(&req, 0, sizeof(req));
     req.reportId = SENSORHUB_SET_FEATURE_CMD;

@@ -141,6 +141,12 @@ typedef struct sh2_SensorConfig {
 
     /* Always on enabled */
     bool alwaysOnEnabled;  /**< @brief Sensor remains on in sleep state */
+
+    bool sniffEnabled; /**< @brief Any output from this sensor should
+                            be sent to host, but reportInterval_us and
+                            sensorSpecific do not influence sensor
+                            operation. Not supported by all sensors. */
+
     /* 16-bit signed fixed point integer representing the value a
      * sensor output must exceed in order to trigger another input
      * report. A setting of 0 causes all reports to be sent.
