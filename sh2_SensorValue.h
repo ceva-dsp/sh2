@@ -446,10 +446,10 @@ typedef struct sh2_DeadReckoningPose {
     float linPosX;
     float linPosY;
     float linPosZ;
-    float real;
     float i;
     float j;
     float k;
+    float real;
     float linVelX;
     float linVelY;
     float linVelZ;
