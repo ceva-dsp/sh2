@@ -1,9 +1,9 @@
 /*
- * Copyright 2015-16 Hillcrest Laboratories, Inc.
+ * Copyright 2015-21 CEVA, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License and 
- * any applicable agreements you may have with Hillcrest Laboratories, Inc.
+ * any applicable agreements you may have with CEVA, Inc.
  * You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -19,9 +19,9 @@
  * @file sh2_err.h
  * @author David Wheeler
  * @date 22 May 2015
- * @brief Type definitions for Hillcrest SH-2 API.
+ * @brief Type definitions for the SH2 API.
  *
- * Struct and type definitions supporting the Hillcrest SH-2 SensorHub API.
+ * Struct and type definitions supporting the SH2 SensorHub API.
  * 
  */
 

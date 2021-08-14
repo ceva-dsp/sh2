@@ -1,11 +1,10 @@
-This software is licensed from Hillcrest Laboratories, Inc.
-Copyright (c) Hillcrest Laboratories, Inc. and its licensors. 
+This software is licensed from CEVA, Inc.
+Copyright (c) CEVA, Inc. and its licensors. 
 All rights reserved.  
 
-Hillcrest Laboratories and the Hillcrest logo are trademarks of 
-Hillcrest Laboratories, Inc.
+CEVA and the CEVA logo are trademarks of CEVA, Inc.
 
-You can contact Hillcrest Laboratories on the web at 
-http://hillcrestlabs.com/company/contact-us/ or at Hillcrest Laboratories, 
+You can contact CEVA, Sensor Fusion Business Unit on the web at 
+https://www.ceva-dsp.com/app/motion-sensing/ or at
 15245 Shady Grove Road, Suite 400, Rockville, MD 20850 USA
 

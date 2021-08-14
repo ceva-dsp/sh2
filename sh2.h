@@ -1,9 +1,9 @@
 /*
- * Copyright 2015-2018 Hillcrest Laboratories, Inc.
+ * Copyright 2015-2021 CEVA, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License and 
- * any applicable agreements you may have with Hillcrest Laboratories, Inc.
+ * any applicable agreements you may have with CEVA, Inc.
  * You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -19,9 +19,9 @@
  * @file sh2.h
  * @author David Wheeler
  * @date 22 Sept 2015
- * @brief API Definition for Hillcrest SH-2 Sensor Hub.
+ * @brief API Definition for SH-2 Sensor Hub.
  *
- * The sh2 API provides an interface to the Hillcrest Labs sensor hub devices.
+ * The sh2 API provides an interface to the CEVA sensor hub devices.
  */
 
 #ifndef SH2_H

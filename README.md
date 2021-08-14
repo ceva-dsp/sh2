@@ -1,4 +1,4 @@
-# SH2 Sensorhub driver for MCU application (No RTOS version)
+# SH2 Sensorhub driver for MCU application
 
 The files in this repository provide application-level SH2 sensor hub functionality.
 

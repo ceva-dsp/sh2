@@ -1,9 +1,9 @@
 /*
- * Copyright 2018 Hillcrest Laboratories, Inc.
+ * Copyright 2018-2021 CEVA, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License and 
- * any applicable agreements you may have with Hillcrest Laboratories, Inc.
+ * any applicable agreements you may have with CEVA, Inc.
  * You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
@@ -16,7 +16,7 @@
  */
 
 /*
- * SH2 HAL Interface for Non-RTOS Applications.
+ * SH2 HAL Interface
  */
 
 // Include guard
