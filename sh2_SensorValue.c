@@ -72,6 +72,7 @@ static int decodeGyroIntegratedRV(sh2_SensorValue_t *value, const sh2_SensorEven
 static int decodeIZroRequest(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 static int decodeRawOptFlow(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 static int decodeDeadReckoningPose(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
+static int decodeWheelEncoder(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event);
 
 // ------------------------------------------------------------------------
 // Public API
@@ -218,6 +219,9 @@ int sh2_decodeSensorEvent(sh2_SensorValue_t *value, const sh2_SensorEvent_t *eve
             break;
         case SH2_DEAD_RECKONING_POSE:
             rc = decodeDeadReckoningPose(value, event);
+            break;
+        case SH2_WHEEL_ENCODER:
+            rc = decodeWheelEncoder(value, event);
             break;
         default:
             // Unknown report id
@@ -597,5 +601,13 @@ static int decodeDeadReckoningPose(sh2_SensorValue_t *value, const sh2_SensorEve
     value->un.deadReckoningPose.angVelX = read32(&event->report[48]) * SCALE_Q(25);
     value->un.deadReckoningPose.angVelY = read32(&event->report[52]) * SCALE_Q(25);
     value->un.deadReckoningPose.angVelZ = read32(&event->report[56]) * SCALE_Q(25);
+    return SH2_OK;
+}
+
+static int decodeWheelEncoder(sh2_SensorValue_t *value, const sh2_SensorEvent_t *event){
+    value->un.wheelEncoder.timestamp = read32(&event->report[4]);
+    value->un.wheelEncoder.wheelIndex = read8(&event->report[8]);
+    value->un.wheelEncoder.dataType = read8(&event->report[9]);
+    value->un.wheelEncoder.data = read16(&event->report[10]);
     return SH2_OK;
 }

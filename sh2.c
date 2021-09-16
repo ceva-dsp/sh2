@@ -400,6 +400,9 @@ static void sensorhubAdvertHdlr(void *cookie, uint8_t tag, uint8_t len, uint8_t 
             n++;
             pSh2->report[n].id = SH2_DEAD_RECKONING_POSE;
             pSh2->report[n].len = 60;
+            n++;
+            pSh2->report[n].id = SH2_WHEEL_ENCODER;
+            pSh2->report[n].len = 12;
             break;
         }
     

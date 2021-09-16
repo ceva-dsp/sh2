@@ -458,6 +458,13 @@ typedef struct sh2_DeadReckoningPose {
     float angVelZ;
 } sh2_DeadReckoningPose_t;
 
+typedef struct sh2_WheelEncoder {
+    uint32_t timestamp;
+    uint8_t wheelIndex;
+    uint8_t dataType;
+    uint16_t data;
+} sh2_WheelEncoder_t;
+
 
 typedef struct sh2_SensorValue {
     
@@ -529,6 +536,7 @@ typedef struct sh2_SensorValue {
         sh2_IZroRequest_t izroRequest;
         sh2_RawOptFlow_t rawOptFlow;
         sh2_DeadReckoningPose_t deadReckoningPose;
+        sh2_WheelEncoder_t wheelEncoder;
     } un;
 } sh2_SensorValue_t;
 

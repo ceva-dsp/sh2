@@ -119,9 +119,10 @@ enum sh2_SensorId_e {
     SH2_IZRO_MOTION_REQUEST = 0x2B,
     SH2_RAW_OPTICAL_FLOW = 0x2C,
     SH2_DEAD_RECKONING_POSE = 0x2D,
+    SH2_WHEEL_ENCODER = 0x2E,
 
     // UPDATE to reflect greatest sensor id
-    SH2_MAX_SENSOR_ID = 0x2D,
+    SH2_MAX_SENSOR_ID = 0x2E,
 };
 typedef uint8_t sh2_SensorId_t;
 
