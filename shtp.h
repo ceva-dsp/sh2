@@ -47,6 +47,8 @@ typedef enum shtp_Event_e {
     SHTP_TOO_LARGE_PAYLOADS = 2,
     SHTP_BAD_RX_CHAN = 3,
     SHTP_BAD_TX_CHAN = 4,
+    SHTP_BAD_FRAGMENT = 5,
+    SHTP_BAD_SN = 6,
 } shtp_Event_t;
 
 typedef void shtp_Callback_t(void * cookie, uint8_t *payload, uint16_t len, uint32_t timestamp);

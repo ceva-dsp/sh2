@@ -559,6 +559,13 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
     continuation = ((in[1] & 0x80) != 0);
     chan = in[2];
     seq = in[3];
+
+    if (seq != pShtp->chan[chan].nextInSeq){
+        if (pShtp->eventCallback) {
+            pShtp->eventCallback(pShtp->eventCookie,
+                                 SHTP_BAD_SN);
+        }
+    }
     
     if (payloadLen < SHTP_HDR_LEN) {
       pShtp->shortFragments++;
@@ -586,6 +593,10 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
         if (!continuation ||
             (chan != pShtp->inChan) ||
             (seq != pShtp->chan[chan].nextInSeq)) {
+            if (pShtp->eventCallback) {
+                pShtp->eventCallback(pShtp->eventCookie,
+                                     SHTP_BAD_FRAGMENT);
+            }
             // This fragment doesn't fit with previous one, discard earlier data
             pShtp->inRemaining = 0;
         }

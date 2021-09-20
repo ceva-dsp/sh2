@@ -412,6 +412,8 @@ enum sh2_ShtpEvent_e {
     SH2_SHTP_TOO_LARGE_PAYLOADS = 2,
     SH2_SHTP_BAD_RX_CHAN = 3,
     SH2_SHTP_BAD_TX_CHAN = 4,
+    SH2_SHTP_BAD_FRAGMENT = 5,
+    SH2_SHTP_BAD_SN = 6,
 };
 typedef uint8_t sh2_ShtpEvent_t;
 
