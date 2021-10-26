@@ -39,8 +39,11 @@
 // ------------------------------------------------------------------------
 // Private type definitions
 
-#define GUID_EXECUTABLE (1)
-#define GUID_SENSORHUB (2)
+#define CHAN_EXECUTABLE_DEVICE    (1)
+#define CHAN_SENSORHUB_CONTROL    (2)
+#define CHAN_SENSORHUB_INPUT      (3)
+#define CHAN_SENSORHUB_INPUT_WAKE (4)
+#define CHAN_SENSORHUB_INPUT_GIRV (5)
 
 // executable/device channel responses
 #define EXECUTABLE_DEVICE_CMD_RESET (1)
@@ -269,16 +272,7 @@ struct sh2_s {
     void *pShtp;
     
     volatile bool resetComplete;
-    bool advertDone;
-    uint8_t executableChan;
-    uint8_t controlChan;
     char version[MAX_VER_LEN+1];
-
-    // Report lengths
-    struct {
-        uint8_t id;
-        uint8_t len;
-    } report[SH2_MAX_REPORT_IDS];
 
     // Multi-step operation support
     const sh2_Op_t *pOp;
@@ -333,6 +327,92 @@ typedef PACKED_STRUCT {
     uint8_t sensorId;
 } ForceFlushResp_t;
 
+typedef struct sh2_ReportLen_s {
+    uint8_t id;
+    uint8_t len;
+} sh2_ReportLen_t;
+
+// SENSORHUB_FRS_WRITE_REQ
+#define SENSORHUB_FRS_WRITE_REQ      (0xF7)
+typedef PACKED_STRUCT {
+    uint8_t reportId;
+    uint8_t reserved;
+    uint16_t length;
+    uint16_t frsType;
+} FrsWriteReq_t;
+
+// SENSORHUB_FRS_WRITE_DATA_REQ
+#define SENSORHUB_FRS_WRITE_DATA_REQ (0xF6)
+typedef PACKED_STRUCT {
+    uint8_t reportId;
+    uint8_t reserved;
+    uint16_t offset;
+    uint32_t data0;
+    uint32_t data1;
+} FrsWriteDataReq_t;
+
+// FRS write status values
+#define FRS_WRITE_STATUS_RECEIVED (0)
+#define FRS_WRITE_STATUS_UNRECOGNIZED_FRS_TYPE (1)
+#define FRS_WRITE_STATUS_BUSY (2)
+#define FRS_WRITE_STATUS_WRITE_COMPLETED (3)
+#define FRS_WRITE_STATUS_READY (4)
+#define FRS_WRITE_STATUS_FAILED (5)
+#define FRS_WRITE_STATUS_NOT_READY (6) // data received when not in write mode
+#define FRS_WRITE_STATUS_INVALID_LENGTH (7)
+#define FRS_WRITE_STATUS_RECORD_VALID (8)
+#define FRS_WRITE_STATUS_INVALID_RECORD (9)
+#define FRS_WRITE_STATUS_DEVICE_ERROR (10)
+#define FRS_WRITE_STATUS_READ_ONLY (11)
+
+// SENSORHUB_FRS_WRITE_RESP
+#define SENSORHUB_FRS_WRITE_RESP     (0xF5)
+typedef PACKED_STRUCT {
+    uint8_t reportId;
+    uint8_t status;
+    uint16_t wordOffset;
+} FrsWriteResp_t;
+
+// RESP_FRS_READ_REQ
+#define SENSORHUB_FRS_READ_REQ       (0xF4)
+typedef PACKED_STRUCT {
+    uint8_t reportId;
+    uint8_t reserved;
+    uint16_t readOffset;
+    uint16_t frsType;
+    uint16_t blockSize;
+} FrsReadReq_t;
+
+// Get Datalen portion of len_status field
+#define FRS_READ_DATALEN(x) ((x >> 4) & 0x0F)
+
+// Get status portion of len_status field
+#define FRS_READ_STATUS(x) ((x) & 0x0F)
+
+// Status values
+#define FRS_READ_STATUS_NO_ERROR                        0
+#define FRS_READ_STATUS_UNRECOGNIZED_FRS_TYPE           1
+#define FRS_READ_STATUS_BUSY                            2
+#define FRS_READ_STATUS_READ_RECORD_COMPLETED           3
+#define FRS_READ_STATUS_OFFSET_OUT_OF_RANGE             4
+#define FRS_READ_STATUS_RECORD_EMPTY                    5
+#define FRS_READ_STATUS_READ_BLOCK_COMPLETED            6
+#define FRS_READ_STATUS_READ_BLOCK_AND_RECORD_COMPLETED 7
+#define FRS_READ_STATUS_DEVICE_ERROR                    8
+
+// SENSORHUB_FRS_READ_RESP
+#define SENSORHUB_FRS_READ_RESP      (0xF3)
+typedef PACKED_STRUCT {
+    uint8_t reportId;
+    uint8_t len_status;  // See FRS_READ... macros above
+    uint16_t wordOffset;
+    uint32_t data0;
+    uint32_t data1;
+    uint16_t frsType;
+    uint8_t reserved0;
+    uint8_t reserved1;
+} FrsReadResp_t;
+
 // ------------------------------------------------------------------------
 // Private data
 
@@ -341,6 +421,61 @@ sh2_t _sh2;
 
 // SH2 Async Event Message
 static sh2_AsyncEvent_t sh2AsyncEvent;
+
+// Lengths of reports by report id.
+static const sh2_ReportLen_t sh2ReportLens[] = {
+    // Sensor reports
+    {.id = SH2_ACCELEROMETER,                .len = 10},  
+    {.id = SH2_GYROSCOPE_CALIBRATED,         .len = 10},
+    {.id = SH2_MAGNETIC_FIELD_CALIBRATED,    .len = 10},
+    {.id = SH2_LINEAR_ACCELERATION,          .len = 10},
+    {.id = SH2_ROTATION_VECTOR,              .len = 14},
+    {.id = SH2_GRAVITY,                      .len = 10},
+    {.id = SH2_GYROSCOPE_UNCALIBRATED,       .len = 16},
+    {.id = SH2_GAME_ROTATION_VECTOR,         .len = 12},
+    {.id = SH2_GEOMAGNETIC_ROTATION_VECTOR,  .len = 14},
+    {.id = SH2_PRESSURE,                     .len =  8},
+    {.id = SH2_AMBIENT_LIGHT,                .len =  8},
+    {.id = SH2_HUMIDITY,                     .len =  6},
+    {.id = SH2_PROXIMITY,                    .len =  6},
+    {.id = SH2_TEMPERATURE,                  .len =  6},
+    {.id = SH2_MAGNETIC_FIELD_UNCALIBRATED,  .len = 16},
+    {.id = SH2_TAP_DETECTOR,                 .len =  5},
+    {.id = SH2_STEP_COUNTER,                 .len = 12},
+    {.id = SH2_SIGNIFICANT_MOTION,           .len =  6},
+    {.id = SH2_STABILITY_CLASSIFIER,         .len =  6},
+    {.id = SH2_RAW_ACCELEROMETER,            .len = 16},
+    {.id = SH2_RAW_GYROSCOPE,                .len = 16},
+    {.id = SH2_RAW_MAGNETOMETER,             .len = 16},
+    {.id = SH2_STEP_DETECTOR,                .len =  8},
+    {.id = SH2_SHAKE_DETECTOR,               .len =  6},
+    {.id = SH2_FLIP_DETECTOR,                .len =  6},
+    {.id = SH2_PICKUP_DETECTOR,              .len =  8},
+    {.id = SH2_STABILITY_DETECTOR,           .len =  6},
+    {.id = SH2_PERSONAL_ACTIVITY_CLASSIFIER, .len = 16},
+    {.id = SH2_SLEEP_DETECTOR,               .len =  6},
+    {.id = SH2_TILT_DETECTOR,                .len =  6},
+    {.id = SH2_POCKET_DETECTOR,              .len =  6},
+    {.id = SH2_CIRCLE_DETECTOR,              .len =  6},
+    {.id = SH2_HEART_RATE_MONITOR,           .len =  6},
+    {.id = SH2_ARVR_STABILIZED_RV,           .len = 14},
+    {.id = SH2_ARVR_STABILIZED_GRV,          .len = 12},
+    {.id = SH2_GYRO_INTEGRATED_RV,           .len = 14},
+    {.id = SH2_IZRO_MOTION_REQUEST,          .len =  6},
+    {.id = SH2_RAW_OPTICAL_FLOW,             .len = 24},
+    {.id = SH2_DEAD_RECKONING_POSE,          .len = 60},
+    {.id = SH2_WHEEL_ENCODER,                .len = 12},
+
+    // Other response types
+    {.id = SENSORHUB_FLUSH_COMPLETED,        .len =  2},
+    {.id = SENSORHUB_COMMAND_RESP,           .len = 16},
+    {.id = SENSORHUB_FRS_READ_RESP,          .len = 16},
+    {.id = SENSORHUB_FRS_WRITE_RESP,         .len =  4},
+    {.id = SENSORHUB_PROD_ID_RESP,           .len = 16},
+    {.id = SENSORHUB_TIMESTAMP_REBASE,       .len =  5},
+    {.id = SENSORHUB_BASE_TIMESTAMP_REF,     .len =  5},
+    {.id = SENSORHUB_GET_FEATURE_RESP,       .len = 17},
+};
 
 // ------------------------------------------------------------------------
 // Private functions
@@ -372,54 +507,15 @@ static void opRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
     }
 }
 
-static void sensorhubAdvertHdlr(void *cookie, uint8_t tag, uint8_t len, uint8_t *value)
+static uint8_t getReportLen(uint8_t reportId)
 {
-    sh2_t *pSh2 = (sh2_t *)cookie;
-    
-    switch (tag) {
-        case TAG_SH2_VERSION:
-            strcpy(pSh2->version, (const char *)value);
-            break;
-
-        case TAG_SH2_REPORT_LENGTHS:
-        {
-            uint8_t reports = len/2;
-            if (reports > SH2_MAX_REPORT_IDS) {
-                // Hub gave us more report lengths than we can store!
-                reports = SH2_MAX_REPORT_IDS;
-            }
-
-            int n;
-            for (n = 0; n < reports; n++) {
-                pSh2->report[n].id = value[n*2];
-                pSh2->report[n].len = value[n*2 + 1];
-            }
-            // TODO-DW : Remove after this is added to adverts
-            pSh2->report[n].id = SH2_RAW_OPTICAL_FLOW;
-            pSh2->report[n].len = 24;
-            n++;
-            pSh2->report[n].id = SH2_DEAD_RECKONING_POSE;
-            pSh2->report[n].len = 60;
-            n++;
-            pSh2->report[n].id = SH2_WHEEL_ENCODER;
-            pSh2->report[n].len = 12;
-            break;
+    for (int n = 0; n < sizeof(sh2ReportLens)/sizeof(sh2ReportLens[0]); n++) {
+        if (sh2ReportLens[n].id == reportId) {
+            return sh2ReportLens[n].len;
         }
-    
-        case 0:
-        {
-            // 0 tag indicates end of advertisements for this app
-            // At this time, the SHTP layer can give us our channel numbers
-            pSh2->executableChan = shtp_chanNo(pSh2->pShtp, "executable", "device");
-            pSh2->controlChan = shtp_chanNo(pSh2->pShtp, "sensorhub", "control");
-
-            pSh2->advertDone = true;
-            break;
-        }
-        
-        default:
-            break;
     }
+
+    return 0;
 }
 
 static void sensorhubControlHdlr(void *cookie, uint8_t *payload, uint16_t len, uint32_t timestamp)
@@ -441,13 +537,7 @@ static void sensorhubControlHdlr(void *cookie, uint8_t *payload, uint16_t len, u
         uint8_t reportId = payload[cursor];
 
         // Determine report length
-        uint8_t reportLen = 0;
-        for (int n = 0; n < SH2_MAX_REPORT_IDS; n++) {
-            if (pSh2->report[n].id == reportId) {
-                reportLen = pSh2->report[n].len;
-                break;
-            }
-        }
+        uint8_t reportLen = getReportLen(reportId);
         if (reportLen == 0) {
             // An unrecognized report id
             pSh2->unknownReportIds++;
@@ -460,7 +550,7 @@ static void sensorhubControlHdlr(void *cookie, uint8_t *payload, uint16_t len, u
                 if ((pResp->command == (SH2_CMD_INITIALIZE | SH2_INIT_UNSOLICITED)) &&
                     (pResp->r[1] == SH2_INIT_SYSTEM)) {
                     // This is an unsolicited INIT message.
-                    // Is it time to call reset callback?
+                    // Ignore this.  EXECUTABLE_DEVICE_RESP_RESET_COMPLETE makes it redundant.
                 }
 
             } // Check for Get Feature Response
@@ -471,14 +561,22 @@ static void sensorhubControlHdlr(void *cookie, uint8_t *payload, uint16_t len, u
 
                     sh2AsyncEvent.eventId = SH2_GET_FEATURE_RESP;
                     sh2AsyncEvent.sh2SensorConfigResp.sensorId = pGetFeatureResp->featureReportId;
-                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.changeSensitivityEnabled = ((pGetFeatureResp->flags & FEAT_CHANGE_SENSITIVITY_ENABLED) != 0);
-                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.changeSensitivityRelative = ((pGetFeatureResp->flags & FEAT_CHANGE_SENSITIVITY_RELATIVE) != 0);
-                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.wakeupEnabled = ((pGetFeatureResp->flags & FEAT_WAKE_ENABLED) != 0);
-                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.alwaysOnEnabled = ((pGetFeatureResp->flags & FEAT_ALWAYS_ON_ENABLED) != 0);
-                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.changeSensitivity = pGetFeatureResp->changeSensitivity;
-                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.reportInterval_us = pGetFeatureResp->reportInterval_uS;
-                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.batchInterval_us = pGetFeatureResp->batchInterval_uS;
-                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.sensorSpecific = pGetFeatureResp->sensorSpecific;
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.changeSensitivityEnabled =
+                        ((pGetFeatureResp->flags & FEAT_CHANGE_SENSITIVITY_ENABLED) != 0);
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.changeSensitivityRelative =
+                        ((pGetFeatureResp->flags & FEAT_CHANGE_SENSITIVITY_RELATIVE) != 0);
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.wakeupEnabled =
+                        ((pGetFeatureResp->flags & FEAT_WAKE_ENABLED) != 0);
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.alwaysOnEnabled =
+                        ((pGetFeatureResp->flags & FEAT_ALWAYS_ON_ENABLED) != 0);
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.changeSensitivity =
+                        pGetFeatureResp->changeSensitivity;
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.reportInterval_us =
+                        pGetFeatureResp->reportInterval_uS;
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.batchInterval_us =
+                        pGetFeatureResp->batchInterval_uS;
+                    sh2AsyncEvent.sh2SensorConfigResp.sensorConfig.sensorSpecific =
+                        pGetFeatureResp->sensorSpecific;
 
                     pSh2->eventCallback(pSh2->eventCookie, &sh2AsyncEvent);
                 }
@@ -509,7 +607,7 @@ static int opProcess(sh2_t *pSh2, const sh2_Op_t *pOp)
 
     start_us = pSh2->pHal->getTimeUs(pSh2->pHal);
     
-    status = opStart(&_sh2, pOp);
+    status = opStart(pSh2, pOp);
     if (status != SH2_OK) {
         return status;
     }
@@ -533,17 +631,6 @@ static int opProcess(sh2_t *pSh2, const sh2_Op_t *pOp)
     }
 
     return pSh2->opStatus;
-}
-
-static uint8_t getReportLen(sh2_t *pSh2, uint8_t reportId)
-{
-    for (int n = 0; n < SH2_MAX_REPORT_IDS; n++) {
-        if (pSh2->report[n].id == reportId) {
-            return pSh2->report[n].len;
-        }
-    }
-
-    return 0;
 }
 
 // Produce 64-bit microsecond timestamp for a sensor event
@@ -579,7 +666,7 @@ static void sensorhubInputHdlr(sh2_t *pSh2, uint8_t *payload, uint16_t len, uint
         uint8_t reportId = payload[cursor];
 
         // Determine report length
-        uint8_t reportLen = getReportLen(pSh2, reportId);
+        uint8_t reportLen = getReportLen(reportId);
         if (reportLen == 0) {
             // An unrecognized report id
             pSh2->unknownReportIds++;
@@ -602,6 +689,7 @@ static void sensorhubInputHdlr(sh2_t *pSh2, uint8_t *payload, uint16_t len, uint
                 opRx(pSh2, payload+cursor, reportLen);
             }
             else {
+                // Sensor event.  Call callback
                 uint8_t *pReport = payload+cursor;
                 uint16_t delay = ((pReport[2] & 0xFC) << 6) + pReport[3];
                 event.timestamp_uS = touSTimestamp(timestamp, referenceDelta, delay);
@@ -612,6 +700,8 @@ static void sensorhubInputHdlr(sh2_t *pSh2, uint8_t *payload, uint16_t len, uint
                     pSh2->sensorCallback(pSh2->sensorCookie, &event);
                 }
             }
+            
+            // Move to next report in the payload
             cursor += reportLen;
         }
     }
@@ -638,7 +728,7 @@ static void sensorhubInputGyroRvHdlr(void *cookie, uint8_t *payload, uint16_t le
     uint16_t cursor = 0;
 
     uint8_t reportId = SH2_GYRO_INTEGRATED_RV;
-    uint8_t reportLen = getReportLen(pSh2, reportId);
+    uint8_t reportLen = getReportLen(reportId);
 
     while (cursor < len) {
         event.timestamp_uS = timestamp;
@@ -652,11 +742,6 @@ static void sensorhubInputGyroRvHdlr(void *cookie, uint8_t *payload, uint16_t le
 
         cursor += reportLen;
     }
-}
-
-static void executableAdvertHdlr(void *cookie, uint8_t tag, uint8_t len, uint8_t *value)
-{
-    // Ignore.  No known TLV tags for this app.
 }
 
 static void executableDeviceHdlr(void *cookie, uint8_t *payload, uint16_t len, uint32_t timestamp)
@@ -688,12 +773,12 @@ static void executableDeviceHdlr(void *cookie, uint8_t *payload, uint16_t len, u
 
 static int sendExecutable(sh2_t *pSh2, uint8_t cmd)
 {
-    return shtp_send(pSh2->pShtp, pSh2->executableChan, &cmd, 1);
+    return shtp_send(pSh2->pShtp, CHAN_EXECUTABLE_DEVICE, &cmd, 1);
 }
 
 static int sendCtrl(sh2_t *pSh2, const uint8_t *data, uint16_t len)
 {
-    return shtp_send(pSh2->pShtp, pSh2->controlChan, data, len);
+    return shtp_send(pSh2->pShtp, CHAN_SENSORHUB_CONTROL, data, len);
 }
 
 static int16_t toQ14(double x)
@@ -875,86 +960,6 @@ const sh2_Op_t setSensorConfigOp = {
 // ------------------------------------------------------------------------
 // Get FRS.
 
-// SENSORHUB_FRS_WRITE_REQ
-#define SENSORHUB_FRS_WRITE_REQ      (0xF7)
-typedef PACKED_STRUCT {
-    uint8_t reportId;
-    uint8_t reserved;
-    uint16_t length;
-    uint16_t frsType;
-} FrsWriteReq_t;
-
-// SENSORHUB_FRS_WRITE_DATA_REQ
-#define SENSORHUB_FRS_WRITE_DATA_REQ (0xF6)
-typedef PACKED_STRUCT {
-    uint8_t reportId;
-    uint8_t reserved;
-    uint16_t offset;
-    uint32_t data0;
-    uint32_t data1;
-} FrsWriteDataReq_t;
-
-// FRS write status values
-#define FRS_WRITE_STATUS_RECEIVED (0)
-#define FRS_WRITE_STATUS_UNRECOGNIZED_FRS_TYPE (1)
-#define FRS_WRITE_STATUS_BUSY (2)
-#define FRS_WRITE_STATUS_WRITE_COMPLETED (3)
-#define FRS_WRITE_STATUS_READY (4)
-#define FRS_WRITE_STATUS_FAILED (5)
-#define FRS_WRITE_STATUS_NOT_READY (6) // data received when not in write mode
-#define FRS_WRITE_STATUS_INVALID_LENGTH (7)
-#define FRS_WRITE_STATUS_RECORD_VALID (8)
-#define FRS_WRITE_STATUS_INVALID_RECORD (9)
-#define FRS_WRITE_STATUS_DEVICE_ERROR (10)
-#define FRS_WRITE_STATUS_READ_ONLY (11)
-
-// SENSORHUB_FRS_WRITE_RESP
-#define SENSORHUB_FRS_WRITE_RESP     (0xF5)
-typedef PACKED_STRUCT {
-    uint8_t reportId;
-    uint8_t status;
-    uint16_t wordOffset;
-} FrsWriteResp_t;
-
-// RESP_FRS_READ_REQ
-#define SENSORHUB_FRS_READ_REQ       (0xF4)
-typedef PACKED_STRUCT {
-    uint8_t reportId;
-    uint8_t reserved;
-    uint16_t readOffset;
-    uint16_t frsType;
-    uint16_t blockSize;
-} FrsReadReq_t;
-
-// Get Datalen portion of len_status field
-#define FRS_READ_DATALEN(x) ((x >> 4) & 0x0F)
-
-// Get status portion of len_status field
-#define FRS_READ_STATUS(x) ((x) & 0x0F)
-
-// Status values
-#define FRS_READ_STATUS_NO_ERROR                        0
-#define FRS_READ_STATUS_UNRECOGNIZED_FRS_TYPE           1
-#define FRS_READ_STATUS_BUSY                            2
-#define FRS_READ_STATUS_READ_RECORD_COMPLETED           3
-#define FRS_READ_STATUS_OFFSET_OUT_OF_RANGE             4
-#define FRS_READ_STATUS_RECORD_EMPTY                    5
-#define FRS_READ_STATUS_READ_BLOCK_COMPLETED            6
-#define FRS_READ_STATUS_READ_BLOCK_AND_RECORD_COMPLETED 7
-#define FRS_READ_STATUS_DEVICE_ERROR                    8
-
-// SENSORHUB_FRS_READ_RESP
-#define SENSORHUB_FRS_READ_RESP      (0xF3)
-typedef PACKED_STRUCT {
-    uint8_t reportId;
-    uint8_t len_status;  // See FRS_READ... macros above
-    uint16_t wordOffset;
-    uint32_t data0;
-    uint32_t data1;
-    uint16_t frsType;
-    uint8_t reserved0;
-    uint8_t reserved1;
-} FrsReadResp_t;
 
 static int getFrsStart(sh2_t *pSh2)
 {
@@ -1521,6 +1526,7 @@ static int setCalConfigStart(sh2_t *pSh2)
     p[1] = (pSh2->opData.calConfig.sensors & SH2_CAL_GYRO)  ? 1 : 0; // gyro cal
     p[2] = (pSh2->opData.calConfig.sensors & SH2_CAL_MAG)   ? 1 : 0; // mag cal
     p[4] = (pSh2->opData.calConfig.sensors & SH2_CAL_PLANAR) ? 1 : 0; // planar cal
+    p[5] = (pSh2->opData.calConfig.sensors & SH2_CAL_ON_TABLE) ? 1 : 0; // on-table cal
     
     return sendCmd(pSh2, SH2_CMD_ME_CAL, p);
 }
@@ -1758,10 +1764,10 @@ int sh2_open(sh2_Hal_t *pHal,
     if (pHal == 0) return SH2_ERR_BAD_PARAM;
 
     // Clear everything in sh2 structure.
-    memset(&_sh2, 0, sizeof(_sh2));
-        
-    pSh2->resetComplete = false;  // will go true after reset response from SH.
-    pSh2->controlChan = 0xFF;  // An invalid value since we don't know yet.
+    memset(pSh2, 0, sizeof(sh2_t));
+
+    // will go true after reset response from SH.
+    pSh2->resetComplete = false;
     
     // Store reference to HAL for future use.
     pSh2->pHal = pHal;
@@ -1778,19 +1784,17 @@ int sh2_open(sh2_Hal_t *pHal,
     }
 
     // Register SHTP event callback
-    shtp_setEventCallback(pSh2->pShtp, shtpEventCallback, &_sh2);
+    shtp_setEventCallback(pSh2->pShtp, shtpEventCallback, pSh2);
 
     // Register with SHTP
     // Register SH2 handlers
-    shtp_listenAdvert(pSh2->pShtp, GUID_SENSORHUB, sensorhubAdvertHdlr, &_sh2);
-    shtp_listenChan(pSh2->pShtp, GUID_SENSORHUB, "control", sensorhubControlHdlr, &_sh2);
-    shtp_listenChan(pSh2->pShtp, GUID_SENSORHUB, "inputNormal", sensorhubInputNormalHdlr, &_sh2);
-    shtp_listenChan(pSh2->pShtp, GUID_SENSORHUB, "inputWake", sensorhubInputWakeHdlr, &_sh2);
-    shtp_listenChan(pSh2->pShtp, GUID_SENSORHUB, "inputGyroRv", sensorhubInputGyroRvHdlr, &_sh2);
+    shtp_listenChan(pSh2->pShtp, CHAN_SENSORHUB_CONTROL, sensorhubControlHdlr, pSh2);
+    shtp_listenChan(pSh2->pShtp, CHAN_SENSORHUB_INPUT, sensorhubInputNormalHdlr, pSh2);
+    shtp_listenChan(pSh2->pShtp, CHAN_SENSORHUB_INPUT_WAKE, sensorhubInputWakeHdlr, pSh2);
+    shtp_listenChan(pSh2->pShtp, CHAN_SENSORHUB_INPUT_GIRV, sensorhubInputGyroRvHdlr, pSh2);
 
     // Register EXECUTABLE handlers
-    shtp_listenAdvert(pSh2->pShtp, GUID_EXECUTABLE, executableAdvertHdlr, &_sh2);
-    shtp_listenChan(pSh2->pShtp, GUID_EXECUTABLE, "device", executableDeviceHdlr, &_sh2);
+    shtp_listenChan(pSh2->pShtp, CHAN_EXECUTABLE_DEVICE, executableDeviceHdlr, pSh2);
 
     // Wait for reset notifications to arrive.
     // The client can't talk to the sensor hub until that happens.
@@ -1865,7 +1869,7 @@ int sh2_devReset(void)
 }
 
 /**
- * @brief Turn sensor hub on by sending RESET (1) command on "device" channel.
+ * @brief Turn sensor hub on by sending ON (2) command on "device" channel.
  *
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
@@ -1877,7 +1881,7 @@ int sh2_devOn(void)
 }
 
 /**
- * @brief Put sensor hub in sleep state by sending SLEEP (2) command on "device" channel.
+ * @brief Put sensor hub in sleep state by sending SLEEP (3) command on "device" channel.
  *
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */

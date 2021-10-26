@@ -21,65 +21,22 @@
 
 #include "shtp.h"
 #include "sh2_err.h"
-#include "sh2_util.h"
 
 #include <string.h>
 
 // ------------------------------------------------------------------------
 // Private types
 
-#define SH2_MAX_APPS (5)
-#define SHTP_APP_NAME_LEN (32)
-#define SH2_MAX_CHANS (8)
-#define SHTP_CHAN_NAME_LEN (32)
-
-// Defined Globally Unique Identifiers
-#define GUID_SHTP (0)
-
-// Command Channel commands and parameters
-#define SHTP_CHAN_COMMAND (0)
-#define CMD_ADVERTISE (0)
-#define CMD_ADVERTISE_SHTP (0)
-#define CMD_ADVERTISE_ALL (1)
-#define RESP_ADVERTISE (0)
-
+#define SHTP_INSTANCES (1)  // Number of SHTP devices supported
+#define SHTP_MAX_CHANS (8)  // Max channels per SHTP device
 #define SHTP_HDR_LEN (4)
-
-#define TAG_SHTP_VERSION 0x80
-
-typedef struct shtp_App_s {
-    uint32_t guid;
-    char appName[SHTP_APP_NAME_LEN];
-} shtp_App_t;
-
-typedef struct shtp_AppListener_s {
-    uint16_t guid;
-    shtp_AdvertCallback_t *callback;
-    void *cookie;
-} shtp_AppListener_t;
-
-typedef struct shtp_ChanListener_s {
-    uint16_t guid;
-    char chanName[SHTP_CHAN_NAME_LEN];
-    shtp_Callback_t *callback;
-    void *cookie;
-} shtp_ChanListener_t;
 
 typedef struct shtp_Channel_s {
     uint8_t nextOutSeq;
     uint8_t nextInSeq;
-    uint32_t guid;  // app id
-    char chanName[SHTP_CHAN_NAME_LEN];
-    bool wake;
     shtp_Callback_t *callback;
     void *cookie;
 } shtp_Channel_t;
-
-typedef enum {
-    ADVERT_NEEDED,
-    ADVERT_REQUESTED,
-    ADVERT_IDLE,
-} advert_phase_t;
 
 // Per-instance data for SHTP
 typedef struct shtp_s {
@@ -91,47 +48,29 @@ typedef struct shtp_s {
     shtp_EventCallback_t *eventCallback;
     void * eventCookie;
 
-    // Data from adverts
-    char shtpVersion[8];
-    uint16_t outMaxPayload;
-    uint16_t outMaxTransfer;
-
     // Transmit support
     uint8_t outTransfer[SH2_HAL_MAX_TRANSFER_OUT];
 
     // Receive support
-    uint16_t inMaxTransfer;
     uint16_t inRemaining;
     uint8_t  inChan;
     uint8_t  inPayload[SH2_HAL_MAX_PAYLOAD_IN];
     uint16_t inCursor;
     uint32_t inTimestamp;
     uint8_t inTransfer[SH2_HAL_MAX_TRANSFER_IN];
-    
-    // What stage of advertisement processing are we in.
-    advert_phase_t advertPhase;
-    
-    // Applications
-    shtp_App_t app[SH2_MAX_APPS];
-    uint8_t    nextApp;
-    
-    // Advert registrations
-    uint8_t nextAppListener;
-    shtp_AppListener_t appListener[SH2_MAX_APPS];
 
     // SHTP Channels
-    shtp_Channel_t      chan[SH2_MAX_CHANS];
+    shtp_Channel_t      chan[SHTP_MAX_CHANS];
 
-    // Channel listeners
-    shtp_ChanListener_t chanListener[SH2_MAX_CHANS];
-    uint8_t             nextChanListener;
-    
     // Stats
-    uint32_t txDiscards;
-    uint32_t shortFragments;
-    uint32_t tooLargePayloads;
-    uint32_t badRxChan;
+    uint32_t rxBadChan;
+    uint32_t rxShortFragments;
+    uint32_t rxTooLargePayloads;
+    uint32_t rxInterruptedPayloads;
+    
     uint32_t badTxChan;
+    uint32_t txDiscards;
+    uint32_t txTooLargePayloads;
 
 } shtp_t;
 
@@ -139,14 +78,7 @@ typedef struct shtp_s {
 // ------------------------------------------------------------------------
 // Private data
 
-// Advertisement request
-static const uint8_t advertise[] = {
-    CMD_ADVERTISE,
-    CMD_ADVERTISE_ALL
-};
-
-#define MAX_INSTANCES (1)
-static shtp_t instances[MAX_INSTANCES];
+static shtp_t instances[SHTP_INSTANCES];
 
 static bool shtp_initialized = false;
 
@@ -155,10 +87,10 @@ static bool shtp_initialized = false;
 
 static void shtp_init(void)
 {
-    // clear instance memory.
-    // In particular, this clears the pHal pointers which are used
-    // to determine if an instance is open and in-use.
-    memset(instances, 0, sizeof(instances));
+    // Clear pHal pointer in every instance.  This marks them as unallocated.
+    for (int n = 0; n < SHTP_INSTANCES; n++) {
+        instances[n].pHal = 0;
+    }
 
     // Set the initialized flag so this doesn't happen again.
     shtp_initialized = true;
@@ -166,7 +98,7 @@ static void shtp_init(void)
 
 static shtp_t *getInstance(void)
 {
-    for (int n = 0; n < MAX_INSTANCES; n++) {
+    for (int n = 0; n < SHTP_INSTANCES; n++) {
         if (instances[n].pHal == 0) {
             // This instance is free
             return &instances[n];
@@ -177,89 +109,6 @@ static shtp_t *getInstance(void)
     return 0;
 }
 
-// Register a listener for an app (advertisement listener)
-static void addAdvertListener(shtp_t *pShtp, uint16_t guid,
-                              shtp_AdvertCallback_t *callback, void * cookie)
-{
-    shtp_AppListener_t *pAppListener = 0;
-
-    // Bail out if no space for more apps
-    if (pShtp->nextAppListener >= SH2_MAX_APPS) return;
-
-    // Register this app
-    pAppListener = &pShtp->appListener[pShtp->nextAppListener];
-    pShtp->nextAppListener++;
-    pAppListener->guid = guid;
-    pAppListener->callback = callback;
-    pAppListener->cookie = cookie;
-}
-
-// Try to match registered listeners with their channels.
-// This is performed every time the underlying Channel, App, Listener data structures are updated.
-// As a result, channel number to callback association is fast when receiving packets
-static void updateCallbacks(shtp_t *pShtp)
-{
-    // Figure out which callback is associated with each channel.
-    //   Channel -> (GUID, Chan name).
-    //   GUID -> App name.
-    //   (App name, Chan name) -> Callback
-
-    uint32_t guid;
-    const char * chanName = 0;
-    
-    for (int chanNo = 0; chanNo < SH2_MAX_CHANS; chanNo++) {
-        // Reset callback for this channel until we find the right one.
-        pShtp->chan[chanNo].callback = 0;
-            
-        if (pShtp->chan[chanNo].guid == 0xFFFFFFFF) {
-            // This channel entry not used.
-            continue;
-        }
-
-        // Get GUID and Channel Name for this channel
-        guid = pShtp->chan[chanNo].guid;
-        chanName = pShtp->chan[chanNo].chanName;
-
-        // Look for a listener registered with this guid, channel name
-        for (int listenerNo = 0; listenerNo < SH2_MAX_CHANS; listenerNo++)
-        {
-            if ((pShtp->chanListener[listenerNo].callback != 0) &&
-                (pShtp->chanListener[listenerNo].guid == guid) &&
-                (strcmp(chanName, pShtp->chanListener[listenerNo].chanName) == 0))
-            {
-            
-                // This listener is the one for this channel
-                pShtp->chan[chanNo].callback = pShtp->chanListener[listenerNo].callback;
-                pShtp->chan[chanNo].cookie = pShtp->chanListener[listenerNo].cookie;
-                break;
-            }
-        }
-    }
-}
-
-// Register a new channel listener
-static int addChanListener(shtp_t *pShtp,
-                           uint16_t guid, const char * chanName,
-                           shtp_Callback_t *callback, void *cookie)
-{
-    shtp_ChanListener_t *pListener = 0;
-
-    // Bail out if there are too many listeners registered
-    if (pShtp->nextChanListener >= SH2_MAX_CHANS) return SH2_ERR;
-
-    // Register channel listener
-    pListener = &pShtp->chanListener[pShtp->nextChanListener];
-    pShtp->nextChanListener++;
-    pListener->guid = guid;
-    strcpy(pListener->chanName, chanName);
-    pListener->callback = callback;
-    pListener->cookie = cookie;
-
-    // re-evaluate channel callbacks
-    updateCallbacks(pShtp);
-
-    return SH2_OK;
-}
 
 static inline uint16_t min_u16(uint16_t a, uint16_t b)
 {
@@ -286,14 +135,14 @@ static int txProcess(shtp_t *pShtp, uint8_t chan, const uint8_t* pData, uint32_t
     remaining = len;
     while (remaining > 0) {
         // How much data (not header) can we send in next transfer
-        transferLen = min_u16(remaining, pShtp->outMaxTransfer-SHTP_HDR_LEN);
+        transferLen = min_u16(remaining, SH2_HAL_MAX_TRANSFER_OUT-SHTP_HDR_LEN);
         
         // Length field will be transferLen + SHTP_HDR_LEN
         lenField = transferLen + SHTP_HDR_LEN;
 
         // Put the header in the out buffer
         pShtp->outTransfer[0] = lenField & 0xFF;
-        pShtp->outTransfer[1] = (lenField >> 8) & 0xFF;
+        pShtp->outTransfer[1] = (lenField >> 8) & 0x7F;
         if (continuation) {
             pShtp->outTransfer[1] |= 0x80;
         }
@@ -327,220 +176,6 @@ static int txProcess(shtp_t *pShtp, uint8_t chan, const uint8_t* pData, uint32_t
     return SH2_OK;
 }
 
-// Callback for SHTP app-specific advertisement tags
-static void shtpAdvertHdlr(void *cookie, uint8_t tag, uint8_t len, uint8_t *val)
-{
-    shtp_t *pShtp = (shtp_t *)cookie;
-
-    switch (tag) {
-        case TAG_SHTP_VERSION:
-            if (strlen((const char *)val) < sizeof(pShtp->shtpVersion)) {
-                strcpy(pShtp->shtpVersion, (const char *)val);
-            }
-            break;
-        default:
-            break;
-    }
-}
-
-// Add one to the set of known Apps
-static void addApp(shtp_t *pShtp, uint32_t guid)
-{
-    shtp_App_t *pApp = 0;
-
-    // Bail out if this GUID is already registered
-    for (int n = 0; n < pShtp->nextApp; n++) {
-        if (pShtp->app[n].guid == guid) return;
-    }
-
-    // Bail out if no space for more apps
-    if (pShtp->nextApp >= SH2_MAX_APPS) return;
-
-    // Register this app
-    pApp = &pShtp->app[pShtp->nextApp];
-    pShtp->nextApp++;
-    pApp->guid = guid;
-    strcpy(pApp->appName, "");
-
-    // Re-evaluate channel callbacks
-    updateCallbacks(pShtp);
-}
-
-static void setAppName(shtp_t *pShtp, uint32_t guid, const char * appName)
-{
-    shtp_App_t *pApp = 0;
-    
-    // Find the app entry with this GUID
-    for (unsigned n = 0; n < pShtp->nextApp; n++) {
-        if (pShtp->app[n].guid == guid) {
-            pApp = &pShtp->app[n];
-            strcpy(pApp->appName, appName);
-            return;
-        }
-    }
-}
-
-// Add one to the set of known channels
-static void addChannel(shtp_t *pShtp, uint8_t chanNo, uint32_t guid, const char * chanName, bool wake)
-{
-    if (chanNo >= SH2_MAX_CHANS) return;
-
-    shtp_Channel_t * pChan = &pShtp->chan[chanNo];
-
-    // Store channel definition
-    pChan->guid = guid;
-    strcpy(pChan->chanName, chanName);
-    pChan->wake = wake;
-
-    // Init channel-associated data
-    pChan->nextOutSeq = 0;
-    pChan->nextInSeq = 0;
-    pChan->callback = 0;
-    pChan->cookie = 0;
-
-    // Re-evaluate channel callbacks
-    updateCallbacks(pShtp);
-}
-
-static void callAdvertHandler(shtp_t *pShtp, uint32_t guid,
-                              uint8_t tag, uint8_t len, uint8_t *val)
-{
-    // Find listener for this app
-    for (int n = 0; n < SH2_MAX_APPS; n++)
-    {
-        if (pShtp->appListener[n].guid == guid) {
-            // Found matching App entry
-            if (pShtp->appListener[n].callback != 0) {
-                pShtp->appListener[n].callback(pShtp->appListener[n].cookie, tag, len, val);
-                return;
-            }
-        }
-    }
-}
-
-static void processAdvertisement(shtp_t *pShtp, uint8_t *payload, uint16_t payloadLen)
-{
-    uint16_t x;
-    uint8_t tag;
-    uint8_t len;
-    uint8_t *val;
-    uint16_t cursor = 1;
-    uint32_t guid = 0;
-    char appName[SHTP_APP_NAME_LEN];
-    char chanName[SHTP_CHAN_NAME_LEN];
-    uint8_t chanNo = 0;
-    bool wake = false;
-
-    strcpy(appName, "");
-    strcpy(chanName, "");
-
-    pShtp->advertPhase = ADVERT_IDLE;
-        
-    while (cursor < payloadLen) {
-        tag = payload[cursor++];
-        len = payload[cursor++];
-        val = payload+cursor;
-        cursor += len;
-
-        // Process tag
-        switch (tag) {
-            case TAG_NULL:
-                // Reserved value, not a valid tag.
-                break;
-            case TAG_GUID:
-                // A new GUID is being established so terminate advertisement process with earlier app, if any.
-                callAdvertHandler(pShtp, guid, TAG_NULL, 0, 0);
-                
-                guid = readu32(val);
-                addApp(pShtp, guid);
-            
-                strcpy(appName, "");
-                strcpy(chanName, "");
-                break;
-            case TAG_MAX_CARGO_PLUS_HEADER_WRITE:
-                x = readu16(val) - SHTP_HDR_LEN;
-            
-                if (x < SH2_HAL_MAX_PAYLOAD_OUT) {
-                    pShtp->outMaxPayload = x;
-                }
-                break;
-            case TAG_MAX_CARGO_PLUS_HEADER_READ:
-                x = readu16(val) - SHTP_HDR_LEN;
-                // No need to store this!
-                break;
-            case TAG_MAX_TRANSFER_WRITE:
-                x = readu16(val) - SHTP_HDR_LEN;
-                if (x < SH2_HAL_MAX_TRANSFER_OUT) {
-                    pShtp->outMaxTransfer = x;
-                } else {
-                    pShtp->outMaxTransfer = SH2_HAL_MAX_TRANSFER_OUT;
-                }
-                break;
-            case TAG_MAX_TRANSFER_READ:
-                x = readu16(val) - SHTP_HDR_LEN;
-                if (x < SH2_HAL_MAX_TRANSFER_IN) {
-                    pShtp->inMaxTransfer = x;
-                }
-                break;
-            case TAG_NORMAL_CHANNEL:
-                chanNo = readu8(val);
-                wake = false;
-                break;
-            case TAG_WAKE_CHANNEL:
-                chanNo = readu8(val);
-                wake = true;
-                break;
-            case TAG_APP_NAME:
-                strcpy(appName, (const char *)val);
-                setAppName(pShtp, guid, appName);
-            
-                break;
-            case TAG_CHANNEL_NAME:
-                strcpy(chanName, (const char *)val);
-                addChannel(pShtp, chanNo, guid, (const char *)val, wake);
-
-                // Store channel metadata
-                if (chanNo < SH2_MAX_CHANS) {
-                    pShtp->chan[chanNo].guid = guid;
-                    strcpy(pShtp->chan[chanNo].chanName, chanName);
-                    pShtp->chan[chanNo].wake = wake;
-                }
-                break;
-            case TAG_ADV_COUNT:
-                // Not yet supported.
-                break;
-            default:
-                // Nothing special needs to be done with this tag.
-                break;
-        }
-        
-        // Deliver a TLV entry to the app's handler
-        callAdvertHandler(pShtp, guid, tag, len, val);
-    }
-
-    // terminate advertisement process with last app
-    callAdvertHandler(pShtp, guid, TAG_NULL, 0, 0);
-}
-
-// Callback for SHTP command channel
-static void shtpCmdListener(void *cookie, uint8_t *payload, uint16_t len, uint32_t timestamp)
-{
-    shtp_t *pShtp = (shtp_t *)cookie;
-    
-    if ((payload == 0) || (len == 0)) return;
-    
-    uint8_t response = payload[0];
-
-    switch (response) {
-        case RESP_ADVERTISE:
-            processAdvertisement(pShtp, payload, len);
-            break;
-        default:
-            // unknown response
-            break;
-    }
-}
-
 static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
 {
     uint16_t payloadLen;
@@ -550,7 +185,10 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
 
     // discard invalid short fragments
     if (len < SHTP_HDR_LEN) {
-        pShtp->shortFragments++;
+        pShtp->rxShortFragments++;
+        if (pShtp->eventCallback) {
+            pShtp->eventCallback(pShtp->eventCookie, SHTP_SHORT_FRAGMENT);
+        }
         return;
     }
     
@@ -568,18 +206,16 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
     }
     
     if (payloadLen < SHTP_HDR_LEN) {
-      pShtp->shortFragments++;
-
-      if (pShtp->eventCallback) {
-          pShtp->eventCallback(pShtp->eventCookie, SHTP_SHORT_FRAGMENT);
-      }
-      return;
+        pShtp->rxShortFragments++;
+        if (pShtp->eventCallback) {
+            pShtp->eventCallback(pShtp->eventCookie, SHTP_SHORT_FRAGMENT);
+        }
+        return;
     }
         
-    if ((chan >= SH2_MAX_CHANS) ||
-        (chan >= pShtp->nextChanListener)) {
+    if (chan >= SHTP_MAX_CHANS) {
         // Invalid channel id.
-        pShtp->badRxChan++;
+        pShtp->rxBadChan++;
 
         if (pShtp->eventCallback) {
             pShtp->eventCallback(pShtp->eventCookie, SHTP_BAD_RX_CHAN);
@@ -592,20 +228,28 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
         // Check this against previously received data.
         if (!continuation ||
             (chan != pShtp->inChan) ||
-            (seq != pShtp->chan[chan].nextInSeq)) {
+            (seq != pShtp->chan[chan].nextInSeq) ||
+            (payloadLen-SHTP_HDR_LEN != pShtp->inRemaining)) {
+            
             if (pShtp->eventCallback) {
                 pShtp->eventCallback(pShtp->eventCookie,
                                      SHTP_BAD_FRAGMENT);
             }
+            
             // This fragment doesn't fit with previous one, discard earlier data
             pShtp->inRemaining = 0;
+
+            pShtp->rxInterruptedPayloads++;
+            if (pShtp->eventCallback) {
+                pShtp->eventCallback(pShtp->eventCookie, SHTP_INTERRUPTED_PAYLOAD);
+            }
         }
     }
 
     if (pShtp->inRemaining == 0) {
         if (payloadLen > sizeof(pShtp->inPayload)) {
             // Error: This payload won't fit! Discard it.
-            pShtp->tooLargePayloads++;
+            pShtp->rxTooLargePayloads++;
             
             if (pShtp->eventCallback) {
                 pShtp->eventCallback(pShtp->eventCookie, SHTP_TOO_LARGE_PAYLOADS);
@@ -675,31 +319,14 @@ void *shtp_open(sh2_Hal_t *pHal)
     // Clear the SHTP instance as a shortcut to initializing all fields
     memset(pShtp, 0, sizeof(shtp_t));
     
+    // Open HAL
+    int status = pHal->open(pHal);
+    if (status != SH2_OK) {
+        return 0;
+    }
+
     // Store reference to the HAL
     pShtp->pHal = pHal;
-
-    // Clear the asynchronous event callback point
-    pShtp->eventCallback = 0;
-    pShtp->eventCookie = 0;
-
-    // Initialize state vars (be prepared for adverts)
-    pShtp->outMaxPayload = SH2_HAL_MAX_PAYLOAD_OUT;
-    pShtp->outMaxTransfer = SH2_HAL_MAX_TRANSFER_OUT;
-
-    // Establish SHTP App and command channel a priori
-    addApp(pShtp, GUID_SHTP);
-    addChannel(pShtp, 0, GUID_SHTP, "command", false);
-    
-    // Register SHTP advert listener and command channel listener
-    shtp_listenAdvert(pShtp, GUID_SHTP, shtpAdvertHdlr, pShtp);
-    shtp_listenChan(pShtp, GUID_SHTP, "command", shtpCmdListener, pShtp);
-
-    // When we open the HAL, it resets the device and adverts are sent automatically.
-    // So we go to ADVERT_REQUESTED state.  They are on the way.
-    pShtp->advertPhase = ADVERT_REQUESTED;
-
-    // Open HAL
-    pHal->open(pHal);
 
     return pShtp;
 }
@@ -712,9 +339,9 @@ void shtp_close(void *pInstance)
 
     pShtp->pHal->close(pShtp->pHal);
     
-    // Clear pShtp
-    // (Resetting pShtp->pHal to 0, returns this instance to the free pool)
-    memset(pShtp, 0, sizeof(shtp_t));
+    // Deallocate the SHTP instance.
+    // (Setting pHal to 0 marks it as free.)
+    pShtp->pHal = 0;
 }
 
 // Register the pointer of the callback function for reporting asynchronous events
@@ -729,83 +356,39 @@ void shtp_setEventCallback(void *pInstance,
 
 // Register a listener for an SHTP channel
 int shtp_listenChan(void *pInstance,
-                    uint16_t guid, const char * chan,
+                    uint8_t channel,
                     shtp_Callback_t *callback, void * cookie)
 {
     shtp_t *pShtp = (shtp_t *)pInstance;
     
-    // Balk if channel name isn't valid
-    if ((chan == 0) || (strlen(chan) == 0)) return SH2_ERR_BAD_PARAM;
-
-    return addChanListener(pShtp, guid, chan, callback, cookie);
-}
-
-// Register a listener for SHTP advertisements 
-int shtp_listenAdvert(void *pInstance,
-                      uint16_t guid,
-                      shtp_AdvertCallback_t *advertCallback, void * cookie)
-{
-    shtp_t *pShtp = (shtp_t *)pInstance;
-    
-    // Register the advert listener
-    addAdvertListener(pShtp, guid, advertCallback, cookie);
-
-    // Arrange for a new set of advertisements, for this listener
-    if (pShtp->advertPhase == ADVERT_IDLE) {
-        pShtp->advertPhase = ADVERT_NEEDED;
+    // Balk if channel is invalid
+    if ((channel == 0) || (channel >= SHTP_MAX_CHANS)) {
+        return SH2_ERR_BAD_PARAM;
     }
+
+    pShtp->chan[channel].callback = callback;
+    pShtp->chan[channel].cookie = cookie;
 
     return SH2_OK;
 }
 
-// Look up the channel number for a particular app, channel.
-uint8_t shtp_chanNo(void *pInstance,
-                    const char * appName, const char * chanName)
-{
-    shtp_t *pShtp = (shtp_t *)pInstance;
-    
-    int chan = 0;
-    uint32_t guid = 0xFFFFFFFF;
-
-    // Determine GUID for this appname
-    for (int n = 0; n < SH2_MAX_APPS; n++) {
-        if (strcmp(pShtp->app[n].appName, appName) == 0) {
-            guid = pShtp->app[n].guid;
-            break;
-        }
-    }
-    if (guid == 0xFFFFFFFF) return -1;
-
-    for (chan = 0; chan < SH2_MAX_CHANS; chan++) {
-        if ((strcmp(pShtp->chan[chan].chanName, chanName) == 0) &&
-            pShtp->chan[chan].guid == guid) {
-            // Found match
-            return chan;
-        }
-    }
-
-    // Not found
-    return 0xFF;
-}
-
 // Send an SHTP payload on a particular channel
 int shtp_send(void *pInstance,
-              uint8_t channel, const uint8_t *payload, uint16_t len)
+              uint8_t channel,
+              const uint8_t *payload, uint16_t len)
 {
     shtp_t *pShtp = (shtp_t *)pInstance;
-    int ret = SH2_OK;
     
-    if (len > pShtp->outMaxPayload) {
+    if (len > SH2_HAL_MAX_PAYLOAD_OUT) {
+        pShtp->txTooLargePayloads++;
         return SH2_ERR_BAD_PARAM;
     }
-    if (channel >= SH2_MAX_CHANS) {
+    if (channel >= SHTP_MAX_CHANS) {
         pShtp->badTxChan++;
         return SH2_ERR_BAD_PARAM;
     }
-    
-    ret = txProcess(pShtp, channel, payload, len);
 
-    return ret;
+    return txProcess(pShtp, channel, payload, len);
 }
 
 // Check for received data and process it.
@@ -813,15 +396,6 @@ void shtp_service(void *pInstance)
 {
     shtp_t *pShtp = (shtp_t *)pInstance;
     uint32_t t_us = 0;
-
-    if (pShtp->advertPhase == ADVERT_NEEDED) {
-        pShtp->advertPhase = ADVERT_REQUESTED;  // do this before send, to avoid recursion.
-        int status = shtp_send(pShtp, SHTP_CHAN_COMMAND, advertise, sizeof(advertise));
-        if (status != SH2_OK) {
-            // Oops, advert request failed.  Go back to needing one.
-            pShtp->advertPhase = ADVERT_NEEDED;
-        }
-    }
 
     int len = pShtp->pHal->read(pShtp->pHal, pShtp->inTransfer, sizeof(pShtp->inTransfer), &t_us);
     if (len) {

@@ -414,6 +414,7 @@ enum sh2_ShtpEvent_e {
     SH2_SHTP_BAD_TX_CHAN = 4,
     SH2_SHTP_BAD_FRAGMENT = 5,
     SH2_SHTP_BAD_SN = 6,
+    SH2_SHTP_INTERRUPTED_PAYLOAD = 7,
 };
 typedef uint8_t sh2_ShtpEvent_t;
 
@@ -644,6 +645,7 @@ int sh2_getOscType(sh2_OscType_t *pOscType);
 #define SH2_CAL_GYRO  (0x02)
 #define SH2_CAL_MAG   (0x04)
 #define SH2_CAL_PLANAR (0x08)
+#define SH2_CAL_ON_TABLE (0x10)
 
 /**
  * @brief Enable/Disable dynamic calibration for certain sensors
