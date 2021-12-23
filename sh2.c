@@ -28,6 +28,13 @@
  *
  */
 
+//Suppress warning about fopen and strcpy safety under MSVC
+#ifdef _MSC_VER
+#   ifndef _CRT_SECURE_NO_WARNINGS
+#       define _CRT_SECURE_NO_WARNINGS
+#   endif
+#endif
+
 #include "sh2.h"
 #include "sh2_err.h"
 #include "shtp.h"
@@ -677,7 +684,7 @@ static void sensorhubInputHdlr(sh2_t *pSh2, uint8_t *payload, uint16_t len, uint
                 const BaseTimestampRef_t *rpt = (const BaseTimestampRef_t *)(payload+cursor);
                 
                 // store base timestamp reference
-                referenceDelta = -rpt->timebase;
+                referenceDelta = (uint32_t)((-(int32_t)rpt->timebase));
             }
             else if (reportId == SENSORHUB_TIMESTAMP_REBASE) {
                 const TimestampRebase_t *rpt = (const TimestampRebase_t *)(payload+cursor);
