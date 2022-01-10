@@ -28,6 +28,13 @@
  *
  */
 
+//Suppress warning about fopen and strcpy safety under MSVC
+#ifdef _MSC_VER
+#   ifndef _CRT_SECURE_NO_WARNINGS
+#       define _CRT_SECURE_NO_WARNINGS
+#   endif
+#endif
+
 #include "sh2.h"
 #include "sh2_err.h"
 #include "shtp.h"
@@ -304,7 +311,7 @@ struct sh2_s {
 #define SENSORHUB_BASE_TIMESTAMP_REF (0xFB)
 typedef PACKED_STRUCT {
     uint8_t reportId;
-    uint32_t timebase;
+    int32_t timebase;
 } BaseTimestampRef_t;
 
 #define SENSORHUB_TIMESTAMP_REBASE   (0xFA)
@@ -657,9 +664,7 @@ static void sensorhubInputHdlr(sh2_t *pSh2, uint8_t *payload, uint16_t len, uint
     sh2_SensorEvent_t event;
     uint16_t cursor = 0;
 
-    uint32_t referenceDelta;
-
-    referenceDelta = 0;
+    int32_t referenceDelta = 0;
 
     while (cursor < len) {
         // Get next report id

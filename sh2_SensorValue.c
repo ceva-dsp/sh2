@@ -27,7 +27,7 @@
 
 #define SCALE_Q(n) (1.0f / (1 << n))
 
-const float scaleRadToDeg = 180.0 / 3.14159265358;
+const float scaleRadToDeg = 180.0f / 3.14159265358f;
 
 // ------------------------------------------------------------------------
 // Forward declarations
