@@ -664,9 +664,7 @@ static void sensorhubInputHdlr(sh2_t *pSh2, uint8_t *payload, uint16_t len, uint
     sh2_SensorEvent_t event;
     uint16_t cursor = 0;
 
-    uint32_t referenceDelta;
-
-    referenceDelta = 0;
+    int32_t referenceDelta = 0;
 
     while (cursor < len) {
         // Get next report id
@@ -684,7 +682,7 @@ static void sensorhubInputHdlr(sh2_t *pSh2, uint8_t *payload, uint16_t len, uint
                 const BaseTimestampRef_t *rpt = (const BaseTimestampRef_t *)(payload+cursor);
                 
                 // store base timestamp reference
-                referenceDelta = (uint32_t)((-(int32_t)rpt->timebase));
+                referenceDelta = -rpt->timebase;
             }
             else if (reportId == SENSORHUB_TIMESTAMP_REBASE) {
                 const TimestampRebase_t *rpt = (const TimestampRebase_t *)(payload+cursor);
