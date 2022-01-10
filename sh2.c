@@ -311,7 +311,7 @@ struct sh2_s {
 #define SENSORHUB_BASE_TIMESTAMP_REF (0xFB)
 typedef PACKED_STRUCT {
     uint8_t reportId;
-    uint32_t timebase;
+    int32_t timebase;
 } BaseTimestampRef_t;
 
 #define SENSORHUB_TIMESTAMP_REBASE   (0xFA)
