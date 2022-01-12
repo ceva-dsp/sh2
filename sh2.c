@@ -698,6 +698,7 @@ static void sensorhubInputHdlr(sh2_t *pSh2, uint8_t *payload, uint16_t len, uint
                 uint8_t *pReport = payload+cursor;
                 uint16_t delay = ((pReport[2] & 0xFC) << 6) + pReport[3];
                 event.timestamp_uS = touSTimestamp(timestamp, referenceDelta, delay);
+                event.delay_uS = (referenceDelta + delay) * 100;
                 event.reportId = reportId;
                 memcpy(event.report, pReport, reportLen);
                 event.len = reportLen;
