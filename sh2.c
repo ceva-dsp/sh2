@@ -1639,6 +1639,33 @@ const sh2_Op_t forceFlushOp = {
 };
 
 // ------------------------------------------------------------------------
+// Clear DCD And Reset
+
+static int clearDcdAndResetStart(sh2_t *pSh2)
+{
+    pSh2->resetComplete = false;
+    int status = sendCmd0(pSh2, SH2_CMD_CLEAR_DCD_AND_RESET);
+
+    return status;
+}
+
+static void clearDcdAndResetRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
+{
+    CommandResp_t *resp = (CommandResp_t *)payload;
+    
+    // Ignore messages until reset cycle is complete.
+    if (!pSh2->resetComplete) return;
+
+    // Complete this operation
+    opCompleted(pSh2, SH2_OK);
+}
+
+const sh2_Op_t clearDcdAndResetOp = {
+    .start = clearDcdAndResetStart,
+    .rx = clearDcdAndResetRx,
+};
+
+// ------------------------------------------------------------------------
 // Start Cal
 
 static int startCalStart(sh2_t *pSh2)
@@ -2328,12 +2355,7 @@ int sh2_clearDcdAndReset(void)
 {
     sh2_t *pSh2 = &_sh2;
 
-    // clear opData
-    memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
-    
-    pSh2->opData.sendCmd.req.command = SH2_CMD_CLEAR_DCD_AND_RESET;
-
-    return opProcess(pSh2, &sendCmdOp);
+    return opProcess(pSh2, &clearDcdAndResetOp);
 }
 
 /**
