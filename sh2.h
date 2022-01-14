@@ -44,6 +44,7 @@
 #define SH2_MAX_SENSOR_EVENT_LEN (60)
 typedef struct sh2_SensorEvent {
     uint64_t timestamp_uS;
+    int64_t delay_uS;
     uint8_t len;
     uint8_t reportId;
     uint8_t report[SH2_MAX_SENSOR_EVENT_LEN];
