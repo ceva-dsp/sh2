@@ -1650,9 +1650,7 @@ static int clearDcdAndResetStart(sh2_t *pSh2)
 }
 
 static void clearDcdAndResetRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
-{
-    CommandResp_t *resp = (CommandResp_t *)payload;
-    
+{  
     // Ignore messages until reset cycle is complete.
     if (!pSh2->resetComplete) return;
 
