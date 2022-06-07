@@ -516,7 +516,7 @@ static void opRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 
 static uint8_t getReportLen(uint8_t reportId)
 {
-    for (int n = 0; n < sizeof(sh2ReportLens)/sizeof(sh2ReportLens[0]); n++) {
+    for (unsigned n = 0; n < ARRAY_LEN(sh2ReportLens); n++) {
         if (sh2ReportLens[n].id == reportId) {
             return sh2ReportLens[n].len;
         }
@@ -527,12 +527,14 @@ static uint8_t getReportLen(uint8_t reportId)
 
 static void sensorhubControlHdlr(void *cookie, uint8_t *payload, uint16_t len, uint32_t timestamp)
 {
+    (void)timestamp;  // unused.
+    
     sh2_t *pSh2 = (sh2_t *)cookie;
 
     uint16_t cursor = 0;
     uint32_t count = 0;
     CommandResp_t * pResp = 0;
-    
+
     if (len == 0) {
         pSh2->emptyPayloads++;
         return;
@@ -752,6 +754,8 @@ static void sensorhubInputGyroRvHdlr(void *cookie, uint8_t *payload, uint16_t le
 
 static void executableDeviceHdlr(void *cookie, uint8_t *payload, uint16_t len, uint32_t timestamp)
 {
+    (void)timestamp;  // unused
+    
     sh2_t *pSh2 = (sh2_t *)cookie;
 
     // Discard if length is bad
@@ -818,6 +822,8 @@ static int getProdIdStart(sh2_t *pSh2)
 
 static void getProdIdRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len;  // unused
+    
     ProdIdResp_t *resp = (ProdIdResp_t *)payload;
     
     // skip this if it isn't the product id response.
@@ -885,6 +891,8 @@ static int getSensorConfigStart(sh2_t *pSh2)
 
 static void getSensorConfigRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
+    
     GetFeatureResp_t *resp = (GetFeatureResp_t *)payload;
     sh2_SensorConfig_t *pConfig;
     
@@ -989,6 +997,8 @@ static int getFrsStart(sh2_t *pSh2)
 
 static void getFrsRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
+    
     FrsReadResp_t *resp = (FrsReadResp_t *)payload;
     uint8_t status;
 
@@ -1058,7 +1068,7 @@ const sh2_Op_t getFrsOp = {
 // ------------------------------------------------------------------------
 // Support for sh2_getMetadata
 
-const static struct {
+static const struct {
     sh2_SensorId_t sensorId;
     uint16_t recordId;
 } sensorToRecordMap[] = {
@@ -1186,6 +1196,8 @@ static int setFrsStart(sh2_t *pSh2)
 
 static void setFrsRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
+    
     FrsWriteResp_t *resp = (FrsWriteResp_t *)payload;
     FrsWriteDataReq_t req;
     uint8_t status;
@@ -1339,6 +1351,8 @@ static int getErrorsStart(sh2_t *pSh2)
 
 static void getErrorsRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
+    
     CommandResp_t *resp = (CommandResp_t *)payload;
     
     // skip this if it isn't the right response
@@ -1382,6 +1396,8 @@ static int getCountsStart(sh2_t *pSh2)
 
 static void getCountsRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
+    
     CommandResp_t *resp = (CommandResp_t *)payload;
 
     if (wrongResponse(pSh2, resp)) return;
@@ -1438,6 +1454,7 @@ static int reinitStart(sh2_t *pSh2)
 
 static void reinitRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
     CommandResp_t *resp = (CommandResp_t *)payload;
 
     // Ignore message if it doesn't pertain to this operation
@@ -1469,6 +1486,7 @@ static int saveDcdNowStart(sh2_t *pSh2)
 
 static void saveDcdNowRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
     CommandResp_t *resp = (CommandResp_t *)payload;
 
     // Ignore message if it doesn't pertain to this operation
@@ -1498,6 +1516,7 @@ static int getOscTypeStart(sh2_t *pSh2)
 
 static void getOscTypeRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
     CommandResp_t *resp = (CommandResp_t *)payload;
     sh2_OscType_t *pOscType;
     
@@ -1539,6 +1558,8 @@ static int setCalConfigStart(sh2_t *pSh2)
 
 static void setCalConfigRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
+    
     CommandResp_t *resp = (CommandResp_t *)payload;
     
     // Ignore message if it doesn't pertain to this operation
@@ -1577,6 +1598,7 @@ static int getCalConfigStart(sh2_t *pSh2)
 
 static void getCalConfigRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
     CommandResp_t *resp = (CommandResp_t *)payload;
     
     // Ignore message if it doesn't pertain to this operation
@@ -1623,6 +1645,8 @@ static int forceFlushStart(sh2_t *pSh2)
 
 static void forceFlushRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
+    
     ForceFlushResp_t *resp = (ForceFlushResp_t *)payload;
     
     // Ignore message if it doesn't pertain to this operation
@@ -1650,7 +1674,10 @@ static int clearDcdAndResetStart(sh2_t *pSh2)
 }
 
 static void clearDcdAndResetRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
-{  
+{
+    (void)payload; // unused
+    (void)len;     // unused
+    
     // Ignore messages until reset cycle is complete.
     if (!pSh2->resetComplete) return;
 
@@ -1685,6 +1712,8 @@ static int startCalStart(sh2_t *pSh2)
 
 static void startCalRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
+    
     CommandResp_t *resp = (CommandResp_t *)payload;
     
     // Ignore message if it doesn't pertain to this operation
@@ -1709,6 +1738,8 @@ static int finishCalStart(sh2_t *pSh2)
 
 static void finishCalRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
 {
+    (void)len; // unused
+    
     CommandResp_t *resp = (CommandResp_t *)payload;
     
     // Ignore message if it doesn't pertain to this operation
@@ -1759,6 +1790,8 @@ const sh2_Op_t sendWheelOp = {
 // SHTP Event Callback
 
 static void shtpEventCallback(void *cookie, shtp_Event_t shtpEvent) {
+    (void)cookie; // unused
+    
     sh2_t *pSh2 = &_sh2;
 
     sh2AsyncEvent.eventId = SH2_SHTP_EVENT;
@@ -1998,7 +2031,7 @@ int sh2_getMetadata(sh2_SensorId_t sensorId, sh2_SensorMetadata_t *pData)
     if (pData == 0) return SH2_ERR_BAD_PARAM;
   
     // Convert sensorId to metadata recordId
-    int i;
+    unsigned i;
     for (i = 0; i < ARRAY_LEN(sensorToRecordMap); i++) {
         if (sensorToRecordMap[i].sensorId == sensorId) {
             break;
@@ -2387,7 +2420,12 @@ int sh2_finishCal(sh2_CalStatus_t *status)
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     
-    return opProcess(pSh2, &finishCalOp);
+    int retval = opProcess(pSh2, &finishCalOp);
+    if (status != NULL) {
+        *status = pSh2->opData.finishCal.status;
+    }
+
+    return retval;
 }
 
 /**
