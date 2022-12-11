@@ -195,11 +195,13 @@ typedef struct sh2_s sh2_t;
 
 typedef int (sh2_OpStart_t)(sh2_t *pSh2);
 typedef void (sh2_OpRx_t)(sh2_t *pSh2, const uint8_t *payload, uint16_t len);
+typedef void (sh2_OpReset_t)(sh2_t *pSh2);
 
 typedef struct sh2_Op_s {
     uint32_t timeout_us;
     sh2_OpStart_t *start;
     sh2_OpRx_t *rx;
+    sh2_OpReset_t *onReset;
 } sh2_Op_t;
 
 // Parameters and state information for the operation in progress
@@ -514,6 +516,31 @@ static void opRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
     }
 }
 
+static int opCompleted(sh2_t *pSh2, int status)
+{
+    // Record status
+    pSh2->opStatus = status;
+
+    // Signal that op is done.
+    pSh2->pOp = 0;
+
+    return SH2_OK;
+}
+
+static void opOnReset(sh2_t *pSh2)
+{
+    if (pSh2->pOp != 0) {
+        if (pSh2->pOp->onReset != 0) {
+            // This operation has its own reset handler so use it.
+            pSh2->pOp->onReset(pSh2);
+        }
+        else {
+            // No reset handler : abort the operation with SH2_ERR code
+            opCompleted(pSh2, SH2_ERR);
+        }
+    }
+}
+
 static uint8_t getReportLen(uint8_t reportId)
 {
     for (unsigned n = 0; n < ARRAY_LEN(sh2ReportLens); n++) {
@@ -598,16 +625,6 @@ static void sensorhubControlHdlr(void *cookie, uint8_t *payload, uint16_t len, u
     }
 }
 
-static int opCompleted(sh2_t *pSh2, int status)
-{
-    // Record status
-    pSh2->opStatus = status;
-
-    // Signal that op is done.
-    pSh2->pOp = 0;
-
-    return SH2_OK;
-}
 
 static int opProcess(sh2_t *pSh2, const sh2_Op_t *pOp)
 {
@@ -769,6 +786,10 @@ static void executableDeviceHdlr(void *cookie, uint8_t *payload, uint16_t len, u
             // reset process is now done.
             pSh2->resetComplete = true;
             
+            // Send reset event to SH2 operation processor.
+            // Some commands may handle themselves.  Most will be aborted with SH2_ERR.
+            opOnReset(pSh2);
+
             // Notify client that reset is complete.
             sh2AsyncEvent.eventId = SH2_RESET;
             if (pSh2->eventCallback) {
@@ -1461,17 +1482,25 @@ static void reinitRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
     if (wrongResponse(pSh2, resp)) return;
 
     // Get return status
-    int status = SH2_OK;
     if (resp->r[0] != 0) {
-        status = SH2_ERR_HUB;
+        pSh2->opStatus = SH2_ERR_HUB;
+        opCompleted(pSh2, pSh2->opStatus);
     }
+    else {
+        pSh2->opStatus = SH2_OK;
+        // OP not complete until hub resets.
+    }
+}
 
-    opCompleted(pSh2, status);
+static void reinitOnReset(sh2_t *pSh2)
+{
+    opCompleted(pSh2, pSh2->opStatus);
 }
 
 const sh2_Op_t reinitOp = {
     .start = reinitStart,
     .rx = reinitRx,
+    .onReset = reinitOnReset,
 };
 
 // ------------------------------------------------------------------------
@@ -1673,21 +1702,15 @@ static int clearDcdAndResetStart(sh2_t *pSh2)
     return status;
 }
 
-static void clearDcdAndResetRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
+static void clearDcdAndResetOnReset(sh2_t *pSh2)
 {
-    (void)payload; // unused
-    (void)len;     // unused
-    
-    // Ignore messages until reset cycle is complete.
-    if (!pSh2->resetComplete) return;
-
-    // Complete this operation
+    // When reset is detected, this op is complete.
     opCompleted(pSh2, SH2_OK);
 }
 
 const sh2_Op_t clearDcdAndResetOp = {
     .start = clearDcdAndResetStart,
-    .rx = clearDcdAndResetRx,
+    .onReset = clearDcdAndResetOnReset,
 };
 
 // ------------------------------------------------------------------------
