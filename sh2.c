@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2021 CEVA, Inc.
+ * Copyright 2015-2022 CEVA, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License and 
@@ -643,6 +643,13 @@ static int opProcess(sh2_t *pSh2, const sh2_Op_t *pOp)
     while ((pSh2->pOp != 0) &&
            ((pOp->timeout_us == 0) ||
             ((now_us-start_us) < pOp->timeout_us))) {
+
+        if (pSh2->pShtp == 0) {
+            // Was SH2 interface closed unexpectedly?
+            pSh2->opStatus = SH2_ERR;
+            break;
+        }
+            
         // Service SHTP to poll the device.
         shtp_service(pSh2->pShtp);
 
@@ -1908,7 +1915,9 @@ void sh2_close(void)
 {
     sh2_t *pSh2 = &_sh2;
     
-    shtp_close(pSh2->pShtp);
+    if (pSh2->pShtp != 0) {
+        shtp_close(pSh2->pShtp);
+    }
 
     // Clear everything in sh2 structure.
     memset(pSh2, 0, sizeof(sh2_t));
@@ -1922,8 +1931,10 @@ void sh2_close(void)
 void sh2_service(void)
 {
     sh2_t *pSh2 = &_sh2;
-    
-    shtp_service(pSh2->pShtp);
+
+    if (pSh2->pShtp != 0) {
+        shtp_service(pSh2->pShtp);
+    }
 }
 
 /**
@@ -1952,6 +1963,10 @@ int sh2_devReset(void)
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     return sendExecutable(pSh2, EXECUTABLE_DEVICE_CMD_RESET);
 }
 
@@ -1964,6 +1979,10 @@ int sh2_devOn(void)
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     return sendExecutable(pSh2, EXECUTABLE_DEVICE_CMD_ON);
 }
 
@@ -1975,6 +1994,10 @@ int sh2_devOn(void)
 int sh2_devSleep(void)
 {
     sh2_t *pSh2 = &_sh2;
+
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
 
     return sendExecutable(pSh2, EXECUTABLE_DEVICE_CMD_SLEEP);
 }
@@ -1989,6 +2012,10 @@ int sh2_getProdIds(sh2_ProductIds_t *prodIds)
 {
     sh2_t *pSh2 = &_sh2;
     
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     
@@ -2008,6 +2035,10 @@ int sh2_getSensorConfig(sh2_SensorId_t sensorId, sh2_SensorConfig_t *pConfig)
 {
     sh2_t *pSh2 = &_sh2;
     
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     
@@ -2029,6 +2060,10 @@ int sh2_setSensorConfig(sh2_SensorId_t sensorId, const sh2_SensorConfig_t *pConf
 {
     sh2_t *pSh2 = &_sh2;
     
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+ 
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     
@@ -2050,6 +2085,10 @@ int sh2_getMetadata(sh2_SensorId_t sensorId, sh2_SensorMetadata_t *pData)
 {
     sh2_t *pSh2 = &_sh2;
     
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     // pData must be non-null
     if (pData == 0) return SH2_ERR_BAD_PARAM;
   
@@ -2099,6 +2138,10 @@ int sh2_getFrs(uint16_t recordId, uint32_t *pData, uint16_t *words)
 {
     sh2_t *pSh2 = &_sh2;
     
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     if ((pData == 0) || (words == 0)) {
         return SH2_ERR_BAD_PARAM;
     }
@@ -2126,6 +2169,10 @@ int sh2_setFrs(uint16_t recordId, uint32_t *pData, uint16_t words)
 {
     sh2_t *pSh2 = &_sh2;
     
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     if ((pData == 0) && (words != 0)) {
         return SH2_ERR_BAD_PARAM;
     }
@@ -2152,6 +2199,10 @@ int sh2_getErrors(uint8_t severity, sh2_ErrorRecord_t *pErrors, uint16_t *numErr
 {
     sh2_t *pSh2 = &_sh2;
     
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     
@@ -2173,6 +2224,10 @@ int sh2_getCounts(sh2_SensorId_t sensorId, sh2_Counts_t *pCounts)
 {
     sh2_t *pSh2 = &_sh2;
     
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     
@@ -2191,6 +2246,10 @@ int sh2_getCounts(sh2_SensorId_t sensorId, sh2_Counts_t *pCounts)
 int sh2_clearCounts(sh2_SensorId_t sensorId)
 {
     sh2_t *pSh2 = &_sh2;
+
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
 
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
@@ -2215,6 +2274,10 @@ int sh2_setTareNow(uint8_t axes,    // SH2_TARE_X | SH2_TARE_Y | SH2_TARE_Z
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     
@@ -2236,6 +2299,10 @@ int sh2_clearTare(void)
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     
@@ -2254,6 +2321,10 @@ int sh2_clearTare(void)
 int sh2_persistTare(void)
 {
     sh2_t *pSh2 = &_sh2;
+
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
 
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
@@ -2274,6 +2345,10 @@ int sh2_persistTare(void)
 int sh2_setReorientation(sh2_Quaternion_t *orientation)
 {
     sh2_t *pSh2 = &_sh2;
+
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
 
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
@@ -2303,6 +2378,10 @@ int sh2_reinitialize(void)
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     return opProcess(pSh2, &reinitOp);
 }
 
@@ -2314,6 +2393,10 @@ int sh2_reinitialize(void)
 int sh2_saveDcdNow(void)
 {
     sh2_t *pSh2 = &_sh2;
+
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
 
     return opProcess(pSh2, &saveDcdNowOp);
 }
@@ -2327,6 +2410,10 @@ int sh2_saveDcdNow(void)
 int sh2_getOscType(sh2_OscType_t *pOscType)
 {
     sh2_t *pSh2 = &_sh2;
+
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
 
     pSh2->opData.getOscType.pOscType = pOscType;
 
@@ -2343,6 +2430,10 @@ int sh2_setCalConfig(uint8_t sensors)
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     pSh2->opData.calConfig.sensors = sensors;
 
     return opProcess(pSh2, &setCalConfigOp);
@@ -2358,6 +2449,10 @@ int sh2_getCalConfig(uint8_t *pSensors)
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     pSh2->opData.getCalConfig.pSensors = pSensors;
 
     return opProcess(pSh2, &getCalConfigOp);
@@ -2372,6 +2467,10 @@ int sh2_getCalConfig(uint8_t *pSensors)
 int sh2_setDcdAutoSave(bool enabled)
 {
     sh2_t *pSh2 = &_sh2;
+
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
 
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
@@ -2392,6 +2491,10 @@ int sh2_flush(sh2_SensorId_t sensorId)
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     
@@ -2409,6 +2512,10 @@ int sh2_clearDcdAndReset(void)
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     return opProcess(pSh2, &clearDcdAndResetOp);
 }
 
@@ -2421,6 +2528,10 @@ int sh2_clearDcdAndReset(void)
 int sh2_startCal(uint32_t interval_us)
 {
     sh2_t *pSh2 = &_sh2;
+
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
 
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
@@ -2439,6 +2550,10 @@ int sh2_startCal(uint32_t interval_us)
 int sh2_finishCal(sh2_CalStatus_t *status)
 {
     sh2_t *pSh2 = &_sh2;
+
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
 
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
@@ -2461,6 +2576,10 @@ int sh2_setIZro(sh2_IZroMotionIntent_t intent)
 {
     sh2_t *pSh2 = &_sh2;
 
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     // clear opData
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
 
@@ -2475,6 +2594,11 @@ int sh2_setIZro(sh2_IZroMotionIntent_t intent)
 
 int sh2_reportWheelEncoder(uint8_t wheelIndex, uint32_t timestamp, int16_t wheelData, uint8_t dataType){
     sh2_t *pSh2 = &_sh2;
+    
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     //No callback (am i doing this right?)
     pSh2->pOp = 0;
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
@@ -2488,6 +2612,11 @@ int sh2_reportWheelEncoder(uint8_t wheelIndex, uint32_t timestamp, int16_t wheel
 
 int sh2_saveDeadReckoningCalNow(void){
     sh2_t *pSh2 = &_sh2;
+    
+    if (pSh2->pShtp == 0) {
+        return SH2_ERR;  // sh2 API isn't open
+    }
+
     memset(&pSh2->opData, 0, sizeof(sh2_OpData_t));
     pSh2->opData.sendCmd.req.command = SH2_CMD_DR_CAL_SAVE;
 
