@@ -239,6 +239,12 @@ typedef enum sh2_TareAxis {
     SH2_TARE_X = 1,  /**< @brief sh2_tareNow() axes bit field */
     SH2_TARE_Y = 2,  /**< @brief sh2_tareNow() axes bit field */
     SH2_TARE_Z = 4,  /**< @brief sh2_tareNow() axes bit field */
+    SH2_TARE_CONTROL_VECTOR_X = (1 << 3),         /**< @brief Use X axis of source and frame to perform tare */
+    SH2_TARE_CONTROL_VECTOR_Y = (0 << 3),         /**< @brief Use Y axis of source and frame to perform tare */
+    SH2_TARE_CONTROL_VECTOR_Z = (2 << 3),         /**< @brief Use Z axis of source and frame to perform tare */
+    SH2_TARE_CONTROL_SEQUENCE_DEFAULT = (0 << 5), /**< @brief Tare "typical" toration for source/axis combination */
+    SH2_TARE_CONTROL_SEQUENCE_PRE = (1 << 5),     /**< @brief Apply to pre-rotation (tare world to device) */
+    SH2_TARE_CONTROL_SEQUENCE_POST = (2 << 5),    /**< @brief Apply to post-rotation (tare device to world) */
 } sh2_TareAxis_t;
 
 /**
@@ -647,6 +653,13 @@ int sh2_getOscType(sh2_OscType_t *pOscType);
 #define SH2_CAL_MAG   (0x04)
 #define SH2_CAL_PLANAR (0x08)
 #define SH2_CAL_ON_TABLE (0x10)
+
+// Bits 5 and 6 encode cal zero gyro control value.
+#define SH2_CAL_ZERO_GYRO_CONTROL_MASK (0x60)
+#define SH2_CAL_ZERO_GYRO_CONTROL_ON_TABLE_DETECT (0 << 5)
+#define SH2_CAL_ZERO_GYRO_CONTROL_NEVER (1 << 5)
+#define SH2_CAL_ZERO_GYRO_CONTROL_ON_TABLE_CLASS (2 << 5)
+#define SH2_CAL_ZERO_GYRO_CONTROL_ON_TABLE_CLASS_OR_LONG_TERM_STABLE (3 << 5)
 
 /**
  * @brief Enable/Disable dynamic calibration for certain sensors

@@ -1588,6 +1588,8 @@ static int setCalConfigStart(sh2_t *pSh2)
     p[2] = (pSh2->opData.calConfig.sensors & SH2_CAL_MAG)   ? 1 : 0; // mag cal
     p[4] = (pSh2->opData.calConfig.sensors & SH2_CAL_PLANAR) ? 1 : 0; // planar cal
     p[5] = (pSh2->opData.calConfig.sensors & SH2_CAL_ON_TABLE) ? 1 : 0; // on-table cal
+
+    p[6] = (pSh2->opData.calConfig.sensors & SH2_CAL_ZERO_GYRO_CONTROL_MASK) >> 5;
     
     return sendCmd(pSh2, SH2_CMD_ME_CAL, p);
 }
