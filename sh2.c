@@ -393,7 +393,7 @@ typedef PACKED_STRUCT {
 } FrsReadReq_t;
 
 // Get Datalen portion of len_status field
-#define FRS_READ_DATALEN(x) ((x >> 4) & 0x0F)
+#define FRS_READ_DATALEN(x) (((x) >> 4) & 0x0F)
 
 // Get status portion of len_status field
 #define FRS_READ_STATUS(x) ((x) & 0x0F)
@@ -1495,19 +1495,13 @@ static void reinitRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
     }
     else {
         pSh2->opStatus = SH2_OK;
-        // OP not complete until hub resets.
+        opCompleted(pSh2, pSh2->opStatus);
     }
-}
-
-static void reinitOnReset(sh2_t *pSh2)
-{
-    opCompleted(pSh2, pSh2->opStatus);
 }
 
 const sh2_Op_t reinitOp = {
     .start = reinitStart,
     .rx = reinitRx,
-    .onReset = reinitOnReset,
 };
 
 // ------------------------------------------------------------------------
