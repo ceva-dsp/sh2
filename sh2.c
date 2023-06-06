@@ -874,7 +874,9 @@ static void getProdIdRx(sh2_t *pSh2, const uint8_t *payload, uint16_t len)
             pProdId->reserved0 = resp->reserved0;
             pProdId->reserved1 = resp->reserved1;
 
-            if (pProdId->swPartNumber == 10004095) {
+            if ((pProdId->swPartNumber == 10004095) ||
+                (pProdId->swPartNumber == 10004818) ||
+                (pProdId->swPartNumber == 10005028)) {
                 // FSP200 has 5 product id entries
                 pSh2->opData.getProdIds.expectedEntries = 5;
             }
