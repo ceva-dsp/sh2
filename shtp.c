@@ -245,6 +245,9 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
             }
         }
     }
+    
+    // Remember next sequence number we expect for this channel.
+    pShtp->chan[chan].nextInSeq = seq + 1;
 
     if (pShtp->inRemaining == 0) {
         if (payloadLen > sizeof(pShtp->inPayload)) {
@@ -254,6 +257,7 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
             if (pShtp->eventCallback) {
                 pShtp->eventCallback(pShtp->eventCookie, SHTP_TOO_LARGE_PAYLOADS);
             }
+
             return;
         }
 
@@ -286,9 +290,6 @@ static void rxAssemble(shtp_t *pShtp, uint8_t *in, uint16_t len, uint32_t t_us)
                                        pShtp->inTimestamp);
         }
     }
-
-    // Remember next sequence number we expect for this channel.
-    pShtp->chan[chan].nextInSeq = seq + 1;
 }
 
 // ------------------------------------------------------------------------
@@ -396,9 +397,9 @@ void shtp_service(void *pInstance)
 {
     shtp_t *pShtp = (shtp_t *)pInstance;
     uint32_t t_us = 0;
-
+    
     int len = pShtp->pHal->read(pShtp->pHal, pShtp->inTransfer, sizeof(pShtp->inTransfer), &t_us);
-    if (len) {
+    if (len > 0) {
         rxAssemble(pShtp, pShtp->inTransfer, len, t_us);
     }
 }
