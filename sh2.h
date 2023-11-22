@@ -439,6 +439,7 @@ typedef struct sh2_AsyncEvent {
 } sh2_AsyncEvent_t;
 
 typedef void (sh2_EventCallback_t)(void * cookie, sh2_AsyncEvent_t *pEvent);
+typedef void * sh2_Handle_t;
 
 
 /***************************************************************************************
@@ -458,10 +459,12 @@ typedef void (sh2_EventCallback_t)(void * cookie, sh2_AsyncEvent_t *pEvent);
  * @param pHal Pointer to an SH2 HAL instance, provided by the target system.
  * @param  eventCallback Will be called when events, such as reset complete, occur.
  * @param  eventCookie Will be passed to eventCallback.
+ * @param  handlep Pointer to an SH2 handle which will be assigned the handle for the opened sensor device.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
 int sh2_open(sh2_Hal_t *pHal,
-             sh2_EventCallback_t *eventCallback, void *eventCookie);
+             sh2_EventCallback_t *eventCallback, void *eventCookie,
+             sh2_Handle_t *handlep);
 
 /**
  * @brief Close a session with a sensor hub.
@@ -469,129 +472,144 @@ int sh2_open(sh2_Hal_t *pHal,
  * This should be called at the end of a sensor hub session.  
  * The underlying SHTP and HAL instances will be closed.
  *
+ * @param handle An SH2 device handle created using sh2_open().
  */
-void sh2_close(void);
+void sh2_close(sh2_Handle_t handle);
 
 /**
  * @brief Service the SH2 device, reading any data that is available and dispatching callbacks.
  *
  * This function should be called periodically by the host system to service an open sensor hub.
  *
+ * @param handle An SH2 device handle created using sh2_open().
  */
-void sh2_service(void);
+void sh2_service(sh2_Handle_t handle);
 
 /**
  * @brief Register a function to receive sensor events.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  callback A function that will be called each time a sensor event is received.
  * @param  cookie  A value that will be passed to the sensor callback function.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_setSensorCallback(sh2_SensorCallback_t *callback, void *cookie);
+int sh2_setSensorCallback(sh2_Handle_t handle, sh2_SensorCallback_t *callback, void *cookie);
 
 /**
  * @brief Reset the sensor hub device by sending RESET (1) command on "device" channel.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_devReset(void);
+int sh2_devReset(sh2_Handle_t handle);
 
 /**
  * @brief Turn sensor hub on by sending ON (2) command on "device" channel.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_devOn(void);
+int sh2_devOn(sh2_Handle_t handle);
 
 /**
  * @brief Put sensor hub in sleep state by sending SLEEP (3) command on "device" channel.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_devSleep(void);
+int sh2_devSleep(sh2_Handle_t handle);
 
 /**
  * @brief Get Product ID information from Sensorhub.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  prodIds Pointer to structure that will receive results.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_getProdIds(sh2_ProductIds_t *prodIds);
+int sh2_getProdIds(sh2_Handle_t handle, sh2_ProductIds_t *prodIds);
 
 /**
  * @brief Get sensor configuration.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  sensorId Which sensor to query.
  * @param  config SensorConfig structure to store results.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_getSensorConfig(sh2_SensorId_t sensorId, sh2_SensorConfig_t *config);
+int sh2_getSensorConfig(sh2_Handle_t handle, sh2_SensorId_t sensorId, sh2_SensorConfig_t *config);
 
 /**
  * @brief Set sensor configuration. (e.g enable a sensor at a particular rate.)
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  sensorId Which sensor to configure.
  * @param  pConfig Pointer to structure holding sensor configuration.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_setSensorConfig(sh2_SensorId_t sensorId, const sh2_SensorConfig_t *pConfig);
+int sh2_setSensorConfig(sh2_Handle_t handle, sh2_SensorId_t sensorId, const sh2_SensorConfig_t *pConfig);
 
 /**
  * @brief Get metadata related to a sensor.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  sensorId Which sensor to query.
  * @param  pData Pointer to structure to receive the results.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_getMetadata(sh2_SensorId_t sensorId, sh2_SensorMetadata_t *pData);
+int sh2_getMetadata(sh2_Handle_t handle, sh2_SensorId_t sensorId, sh2_SensorMetadata_t *pData);
 
 /**
  * @brief Get an FRS record.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  recordId Which FRS Record to retrieve.
  * @param  pData pointer to buffer to receive the results
  * @param[in] words Size of pData buffer, in 32-bit words.
  * @param[out] words Number of 32-bit words retrieved.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_getFrs(uint16_t recordId, uint32_t *pData, uint16_t *words);
+int sh2_getFrs(sh2_Handle_t handle, uint16_t recordId, uint32_t *pData, uint16_t *words);
 
 /**
  * @brief Set an FRS record
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  recordId Which FRS Record to set.
  * @param  pData pointer to buffer containing the new data.
  * @param  words number of 32-bit words to write.  (0 to delete record.)
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_setFrs(uint16_t recordId, uint32_t *pData, uint16_t words);
+int sh2_setFrs(sh2_Handle_t handle, uint16_t recordId, uint32_t *pData, uint16_t words);
 
 /**
  * @brief Get error counts.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  severity Only errors of this severity or greater are returned.
  * @param  pErrors Buffer to receive error codes.
  * @param  numErrors size of pErrors array
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_getErrors(uint8_t severity, sh2_ErrorRecord_t *pErrors, uint16_t *numErrors);
+int sh2_getErrors(sh2_Handle_t handle, uint8_t severity, sh2_ErrorRecord_t *pErrors, uint16_t *numErrors);
 
 /**
  * @brief Read counters related to a sensor.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  sensorId Which sensor to operate on.
  * @param  pCounts Pointer to Counts structure that will receive data.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_getCounts(sh2_SensorId_t sensorId, sh2_Counts_t *pCounts);
+int sh2_getCounts(sh2_Handle_t handle, sh2_SensorId_t sensorId, sh2_Counts_t *pCounts);
 
 /**
  * @brief Clear counters related to a sensor.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  sensorId which sensor to operate on.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_clearCounts(sh2_SensorId_t sensorId);
+int sh2_clearCounts(sh2_Handle_t handle, sh2_SensorId_t sensorId);
 
 /**
  * @brief Perform a tare operation on one or more axes.
@@ -600,52 +618,59 @@ int sh2_clearCounts(sh2_SensorId_t sensorId);
  * @param  basis Which rotation vector to use as the basis for Tare adjustment.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_setTareNow(uint8_t axes,    // SH2_TARE_X | SH2_TARE_Y | SH2_TARE_Z
+int sh2_setTareNow(sh2_Handle_t handle,
+		   uint8_t axes,    // SH2_TARE_X | SH2_TARE_Y | SH2_TARE_Z
                    sh2_TareBasis_t basis);
 
 /**
  * @brief Clears the previously applied tare operation.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_clearTare(void);
+int sh2_clearTare(sh2_Handle_t handle, sh2_Handle_t handle);
 
 /**
  * @brief Persist the results of last tare operation to flash.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_persistTare(void);
+int sh2_persistTare(sh2_Handle_t handle);
 
 /**
  * @brief Set the current run-time sensor reorientation. (Set to zero to clear tare.)
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  orientation Quaternion rotation vector to apply as new tare.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_setReorientation(sh2_Quaternion_t *orientation);
+int sh2_setReorientation(sh2_Handle_t handle, sh2_Quaternion_t *orientation);
 
 /**
  * @brief Command the sensorhub to reset.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_reinitialize(void);
+int sh2_reinitialize(sh2_Handle_t handle);
 
 /**
  * @brief Save Dynamic Calibration Data to flash.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_saveDcdNow(void);
+int sh2_saveDcdNow(sh2_Handle_t handle);
 
 /**
  * @brief Get Oscillator type.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  pOscType pointer to data structure to receive results.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_getOscType(sh2_OscType_t *pOscType);
+int sh2_getOscType(sh2_Handle_t handle, sh2_OscType_t *pOscType);
 
 // Flags for sensors field of sh_calConfig
 #define SH2_CAL_ACCEL (0x01)
@@ -664,68 +689,77 @@ int sh2_getOscType(sh2_OscType_t *pOscType);
 /**
  * @brief Enable/Disable dynamic calibration for certain sensors
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  sensors Bit mask to configure which sensors are affected.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_setCalConfig(uint8_t sensors);
+int sh2_setCalConfig(sh2_Handle_t handle, uint8_t sensors);
 
 /**
  * @brief Get dynamic calibration configuration settings.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  pSensors pointer to Bit mask, set on return.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_getCalConfig(uint8_t *pSensors);
+int sh2_getCalConfig(sh2_Handle_t handle, uint8_t *pSensors);
 
 /**
  * @brief Configure automatic saving of dynamic calibration data.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  enabled Enable or Disable DCD auto-save.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_setDcdAutoSave(bool enabled);
+int sh2_setDcdAutoSave(sh2_Handle_t handle, bool enabled);
 
 /**
  * @brief Immediately issue all buffered sensor reports from a given sensor.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @param  sensorId Which sensor reports to flush.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_flush(sh2_SensorId_t sensorId);
+int sh2_flush(sh2_Handle_t handle, sh2_SensorId_t sensorId);
 
 /**
  * @brief Command clear DCD in RAM, then reset sensor hub.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_clearDcdAndReset(void);
+int sh2_clearDcdAndReset(sh2_Handle_t handle, sh2_Handle_t handle);
 
 /**
  * @brief Start simple self-calibration procedure.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @parameter interval_us sensor report interval, uS.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_startCal(uint32_t interval_us);
+int sh2_startCal(sh2_Handle_t handle, uint32_t interval_us);
 
 /**
  * @brief Finish simple self-calibration procedure.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @parameter status contains calibration status code on return.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_finishCal(sh2_CalStatus_t *status);
+int sh2_finishCal(sh2_Handle_t handle, sh2_CalStatus_t *status);
 
 /**
  * @brief send Interactive ZRO Request.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @parameter intent Inform the sensor hub what sort of motion should be in progress.
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_setIZro(sh2_IZroMotionIntent_t intent);
+int sh2_setIZro(sh2_Handle_t handle, sh2_IZroMotionIntent_t intent);
 
 /**
  * @brief Report wheel position/velocity to sensor hub.
+ * @param  handle An SH2 device handle created using sh2_open().
  * @parameter wheelIndex platform-dependent: 0= left, 1= right for
  *   typical differential drive robot
  * @parameter timestamp microsecond timestamp (hub scale) of measurement
@@ -733,13 +767,14 @@ int sh2_setIZro(sh2_IZroMotionIntent_t intent);
  * @parameter dataType 0 if data is position, 1 if data is velocity
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_reportWheelEncoder(uint8_t wheelIndex, uint32_t timestamp, int16_t wheelData, uint8_t dataType);
+int sh2_reportWheelEncoder(sh2_Handle_t handle, uint8_t wheelIndex, uint32_t timestamp, int16_t wheelData, uint8_t dataType);
 
 /**
  * @brief Save Dead Reckoning Calibration Data to flash.
  *
+ * @param  handle An SH2 device handle created using sh2_open().
  * @return SH2_OK (0), on success.  Negative value from sh2_err.h on error.
  */
-int sh2_saveDeadReckoningCalNow(void);
+int sh2_saveDeadReckoningCalNow(sh2_Handle_t handle);
 
 #endif
